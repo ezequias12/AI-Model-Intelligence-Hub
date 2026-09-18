@@ -1,0 +1,196 @@
+# Session log
+
+Append-only record of working sessions. Newest entries first. Each entry states what was done, what
+was verified (and how), and what was left open. Do not rewrite past entries.
+
+## 2026-09-18 - UI redesign, hydration fix and E2E verification session
+
+**Scope:** Complete UI redesign following GitHub UI skills guidelines (Anthropic `frontend-design`, Vercel `web-design-guidelines`, `impeccable`, `accessibility`), fix the React hydration mismatch bug (#418) caused by relative time rendering in static routes, and re-verify the full gate including Playwright E2E.
+
+**What was done**
+
+1. Implemented a refreshed design system in `tailwind.config.ts`: typographic scale (11/12/13/14/16/18/22/28/36), role-based radii (`rounded-panel` 12px, `rounded-control` 8px, `rounded-chip` 6px), edge-only elevation (`shadow-overlay`, `shadow-tooltip`, removing diffuse card shadows), exponential easing, and keyframe animations (`overlay-in`, `sheet-in`, `leader-in`).
+2. Overhauled `src/app/globals.css`: cyan-teal tinted neutrals, deep cyan-teal accent, semantic `-muted` surface tokens, themed browser surfaces (`::selection`, `caret-color`, custom scrollbars, `:focus-visible` offset ring), hairline metadata separators (`.meta-sep`), and monospace measurement tokens (`.measured`).
+3. Re-architected UI primitives: `card.tsx` (Panel structure + aliases), `button.tsx`, `badge.tsx`, `input.tsx`, `overlay.tsx`, and `primitives.tsx` (`MetaLine`, `MetricValue`, `DeltaBadge`).
+4. Redesigned the application shell (`src/components/shell/app-shell.tsx`): labeled rail section dividers, underline tab indicators, and collapsed rail state.
+5. Transformed features across the app: eliminated AI tells (all uppercase tracking-wide eyebrows and middle-dot separators removed in favour of `.meta-sep`), converted Market Pulse to an instrument strip, converted Metric Leaders into a signature component with 40ms stagger motion, and corrected overview source freshness to read from the ingestion ledger.
+6. Resolved React hydration mismatch bug (#418) on 7 static routes (`/models`, `/models/table`, `/models/releases`, `/compare`, `/news`, `/news/social`, `/sources`) by creating `src/components/ui/relative-time.tsx` (`<RelativeTime>`, `<FreshnessBadge>`) with `suppressHydrationWarning` and dynamic client-side timer updates across 24 usages in 14 files.
+
+**Verified**
+
+- `npm run check` (Prettier, ESLint, TypeScript strict mode, 222 unit/integration tests, production build) exits 0.
+- `npm run test:e2e` (Playwright suite covering desktop and mobile Chromium projects) passes 177 tests (5 skipped) in 1.5 minutes.
+- Verified absence of React hydration warnings (#418) on static routes under production build.
+
+**Not done**
+
+- No credential-dependent integration was exercised.
+- Repository still has no commits yet.
+
+**Open**
+
+- Priority backlog without credentials: seed harness products and plans (H1), persist change events from diffs (H2), seed monitored social accounts (H3), report quota guard as deferred (KI-1/M1).
+
+## 2026-09-18 - Implementation and verification session
+
+**Scope:** build the application described by the specification package, then verify it end to end.
+Out of scope: any credentialed or billable external action, and any deployment.
+
+**What was done**
+
+1. Scaffolded the repository: `package.json` with pinned versions, strict TypeScript, Next.js 15 App
+   Router, Tailwind with token-based light/dark themes, ESLint, Prettier, Vitest and Playwright.
+2. Implemented the domain core: Zod schemas for every entity, derived metrics (blended price,
+   monthly workload cost, four value-score modes, Pareto frontier, ranking), the dynamic default
+   model resolver, presets, provider grouping, URL and storage selection state, URL canonicalization,
+   stable hashing, news clustering, snapshot diffing and freshness.
+3. Built deterministic fixtures for 32 models, 16 providers, model snapshot history, news, social
+   posts, nine harness products with plans and change events, 22 world items and the source registry.
+4. Implemented the data layer: a repository interface with a mock implementation and a Supabase
+   implementation, row schemas validated at the boundary, mappers, and a factory that degrades loudly
+   when live mode is requested without credentials.
+5. Implemented adapters: an Artificial Analysis client with pagination, quota guard, rate-limit
+   header capture, `Retry-After` handling and exponential backoff; a dependency-free RSS/Atom parser;
+   a versioned, fail-loud harness pricing extractor; a social adapter that refuses to run without an
+   authorized token and never scrapes HTML; and an isolated world-news adapter with a neutrality gate.
+6. Built the ingestion layer: an explicit job registry, a QStash signature verifier that refuses
+   unverified triggers in live mode, a service-role writer with idempotent upserts, and a runner that
+   reports `ok`, `deferred`, `disabled`, `not_configured` or `failed` per source.
+7. Built the interface: app shell with a collapsible rail, mobile tabs, command palette and
+   first-paint theme script; the Models workspace (selection tray, metric leaders, ranking boards,
+   configurable charts with a Pareto frontier, dense table with CSV export, model detail page and
+   drawer, releases feed); Compare in two separate schemas; News; Harness Watch; World & Politics;
+   Watchlists; Sources; and Methodology.
+8. Added the database migrations (six files) with the RLS model, indexes, idempotency keys and a
+   seeded source registry, plus job-scheduling, local-job and type-generation scripts.
+
+**Verified**
+
+- `npm run check` (format check, lint, typecheck, tests, production build) exits 0.
+- `npm run test` runs 222 tests across 10 files and all pass.
+- `npm run build` produces 26 routes.
+- `npx playwright test` runs 177 tests across the desktop and mobile projects and all pass.
+- The browser console is clean on nine routes in both viewports after the fixes below.
+- No test result, coverage figure or benchmark is claimed anywhere in the documentation.
+
+**Defects found during verification and fixed**
+
+- The native `<dialog>` collapsed to a zero-size box because its only child is positioned, which made
+  every modal and drawer unreachable for assistive technology and automation. The dialog now owns a
+  full-viewport box.
+- `buildSearchIndex` emitted the same id twice for paths that are both a rail item and a workspace
+  sub-route, producing duplicate React keys in the command palette.
+- The inline theme script was exported from a client module and imported by the server layout, which
+  forced a full reload on every edit. It now lives in its own module.
+- Four pages rendered a second `<h1>` alongside the shell's, so each of those routes had two top-level
+  headings. The duplicate headings were removed and the intro copy kept.
+- `npm run dev` failed on any machine with a globally exported `NODE_ENV=production`, breaking the CSS
+  pipeline. `scripts/dev.mjs` now pins `NODE_ENV=development` cross-platform.
+- The fixture launch story did not cluster because its secondary headlines were too dissimilar; the
+  clustering demo was therefore invisible.
+
+**Not done**
+
+- No credential-dependent integration was exercised: Artificial Analysis live calls, Supabase
+  persistence, QStash schedules, the social API and the world news provider all remain unverified.
+- The harness pricing selectors have not been checked against the live pages.
+- No accessibility audit with axe, no performance measurement and no security scan.
+- No commit was created; the repository still has no commits.
+
+**Open**
+
+- Everything in `docs/09-handoffs/agent-handoff.md`, plus the housekeeping items: create an initial
+  commit and choose a license.
+
+## 2026-09-18 - Documentation phase
+
+**Scope:** write the complete documentation set required by
+`REPOSITORY_AND_DOCUMENTATION_STANDARD.md`, plus the root markdown files. No file under `src/`,
+`tests/`, `supabase/` or `scripts/` was modified.
+
+**What was done**
+
+1. Read the authoritative product specifications at the repository root: `START_HERE.md`,
+   `PACKAGE_MANIFEST.md`, `CANONICAL_NAMING.md`, `MASTER_AGENT_PROMPT.md`,
+   `PRODUCT_INFORMATION_ARCHITECTURE.md`, `UI_UX_SPECIFICATION.md`,
+   `NEWS_AND_HARNESS_SPECIFICATION.md`, `DATA_SOURCES_AND_PIPELINES.md`,
+   `REPOSITORY_AND_DOCUMENTATION_STANDARD.md`, `SEED_SOURCE_REGISTRY.json`,
+   `SEND_THIS_TO_AGENT.txt`.
+2. Read the implementation to document it rather than describe intent: the domain modules
+   (schema, metrics, selection, hash, diff, freshness, harness metrics, world), the analytics
+   registry and assembly, all eight adapters plus the HTTP client, the data layer (mode, repository,
+   mock and Supabase implementations, workspace loaders), the row schemas and mappers, the ingestion
+   runner, writer and harness configs, the job registry and QStash verification, the fixtures, the
+   navigation and search modules, the formatting module, all six migrations, the App Router pages
+   and feature components, the scripts, the two API route handlers, the package manifest, the
+   environment template and the ESLint, Prettier, TypeScript, Next.js, Vitest and Playwright
+   configurations.
+3. Read all ten test files and the Vitest setup to describe coverage accurately.
+4. Created the documentation tree required by the standard, the four templates, the archive
+   placeholder, and the root files `README.md`, `AGENTS.md`, `CONTRIBUTING.md`, `SECURITY.md`,
+   `CHANGELOG.md` and a `LICENSE` placeholder.
+5. Recorded the honest status picture: six capabilities marked
+   `IMPLEMENTED - LIVE VERIFICATION PENDING CREDENTIALS` with the exact variable each needs, and a
+   separate list of what is not implemented at all.
+
+**Verified**
+
+- `git status` reports every file as untracked and `git log` fails: the repository has no commits.
+  This is stated in the handoff, the status documents and the changelog.
+- At the time of this phase no CI workflow existed (no `.github` directory; confirmed by directory
+  listing and glob). A CI workflow (`.github/workflows/ci.yml`) has since been added.
+- At the time of this phase no Playwright spec files existed: `tests/` contained `unit`,
+  `integration` and `setup` only, while `playwright.config.ts` targeted `tests/e2e` (confirmed by
+  glob). Specs have since been added under `tests/e2e`.
+- No axe dependency is installed. Confirmed by reading `package.json`.
+- `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `QSTASH_URL`, `LLM_SUMMARY_MODEL` and
+  `LOG_LEVEL` appear in `.env.example` but are read nowhere in the code. Confirmed by searching
+  `process.env` usage across the repository.
+- No LLM summariser implementation exists: `LLM_SUMMARY_API_KEY` appears only in the capability
+  report, and no client module exists. Confirmed by searching for the variable and for summary
+  generation.
+- `private.raw_ingestion_payloads` is referenced only by its migration and by a maintenance branch
+  that returns a message. Nothing writes to it and nothing deletes from it. Confirmed by searching
+  for the table name.
+- `writer.writeChangeEvents`, `writer.writeHarnessChangeEvents`, `writer.writeHarnessProducts` and
+  `writer.writeHarnessPlans` are implemented but called by no job. Confirmed by searching for each
+  method name.
+- `previousSnapshot()` (fixtures) and `signingKeysConfigured()` (verify) are exported and unused.
+  Confirmed by searching for each identifier.
+- The `payloadHash` JSDoc says sha256 while the implementation is a 16-character FNV-1a hash.
+  Confirmed by reading `src/lib/domain/schema.ts` and `src/lib/domain/hash.ts`.
+- RLS model, unique indexes, table columns and constraints were taken from the SQL files directly.
+
+**Not done**
+
+- No test suite was executed. No result is claimed anywhere in the documentation, and
+  `docs/06-quality/testing-strategy.md` instructs the reader to run the suite.
+- No credential-dependent integration was exercised.
+- No deployment was performed.
+- No accessibility, performance or security audit was run.
+
+**Open**
+
+Everything listed in `docs/09-handoffs/agent-handoff.md` under "Open threads", plus the two
+immediate housekeeping items: make an initial commit so a rollback point exists, and choose a
+license so the repository grants rights.
+
+## Template for the next entry
+
+```text
+## YYYY-MM-DD - <session name>
+
+**Scope:** <what this session was for, and what was explicitly out of scope>
+
+**What was done**
+1. <Change>
+
+**Verified**
+- <Claim>: <how it was verified>
+
+**Not done**
+- <What was skipped, and why>
+
+**Open**
+- <Threads left open, with a pointer to where they are tracked>
+```

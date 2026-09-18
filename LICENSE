@@ -1,0 +1,26 @@
+# License
+
+**License undecided.**
+
+This repository does not currently grant any license for use, modification or
+distribution. The license text has intentionally not been chosen by an automated
+process, because choosing a license is the repository owner's decision.
+
+Before this repository is published, made public or distributed, the owner must:
+
+1. Choose a license (for example MIT, Apache-2.0, AGPL-3.0 or a proprietary
+   "all rights reserved" notice).
+2. Replace this file with the full, verbatim license text for that choice.
+3. Add the same license identifier to `package.json` under `"license"`.
+4. Review third-party terms that are already relevant to the product, independent of
+   this repository's own license:
+   - Artificial Analysis Data API terms and required attribution
+     (see `docs/04-data/attribution-and-licensing.md`).
+   - Harness pricing-page and provider feed terms.
+   - Any future world/political news provider agreement.
+
+Until step 2 is complete, treat the contents of this repository as
+**all rights reserved** by default.
+
+No license file, SPDX identifier or copyright header elsewhere in the repository
+should be read as granting a license.

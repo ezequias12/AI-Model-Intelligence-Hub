@@ -1,0 +1,72 @@
+-- =============================================================================
+-- 0006 — Seed the source registry
+--
+-- The registry is data, not code: sources are enabled/disabled and their cadence
+-- tuned without a deploy. URLs and terms must still be verified before enabling
+-- a source in production.
+-- =============================================================================
+
+insert into public.sources (id, domain, name, type, url, enabled, priority, cadence_minutes, attribution, licensing_note, notes)
+values
+  ('artificial-analysis-api', 'models', 'Artificial Analysis Data API', 'api',
+   'https://artificialanalysis.ai/data-api/docs', true, 1, 30, 'Artificial Analysis',
+   'Attribution required. Respect quota; never scrape to bypass limits.',
+   'Primary model metrics source.'),
+  ('internal:provider-registry', 'internal', 'Internal provider registry', 'manual',
+   'https://artificialanalysis.ai/data-api/docs', true, 1, null, null, null,
+   'Maintained in-repo. Provider grouping is geographic, never a quality label.'),
+  ('command-code-pricing', 'harness', 'Command Code Pricing', 'official_pricing',
+   'https://commandcode.ai/pricing', true, 1, 240, 'Command Code', 'Public pricing page.',
+   'Controlled HTML extraction with selector fixtures; fails loudly on shape change.'),
+  ('command-code-go', 'harness', 'Command Code Go docs', 'official_docs',
+   'https://commandcode.ai/docs/plans/go', true, 1, 360, 'Command Code', 'Public documentation.', null),
+  ('opencode-go', 'harness', 'OpenCode Go', 'official_docs',
+   'https://opencode.ai/v2/docs/console/go', true, 1, 360, 'OpenCode', 'Public documentation.', null),
+  ('kilo-pricing', 'harness', 'Kilo Code Pricing', 'official_pricing',
+   'https://kilo.ai/pricing', true, 1, 240, 'Kilo Code', 'Public pricing page.', null),
+  ('claude-pricing', 'harness', 'Claude Pricing', 'official_pricing',
+   'https://claude.com/pricing', true, 1, 240, 'Anthropic', 'Public pricing page.', null),
+  ('freebuff', 'harness', 'Freebuff', 'official_site',
+   'https://freebuff.ai/', true, 1, 360, 'Freebuff', 'Public site.',
+   'Ad-supported offering; allowance may change without notice.'),
+  ('cursor-pricing', 'harness', 'Cursor Pricing', 'official_pricing',
+   'https://cursor.com/pricing', true, 2, 360, 'Cursor', 'Public pricing page.', null),
+  ('windsurf-pricing', 'harness', 'Windsurf Pricing', 'official_pricing',
+   'https://windsurf.com/pricing', true, 2, 360, 'Windsurf', 'Public pricing page.', null),
+  ('gemini-cli-releases', 'harness', 'Gemini CLI releases', 'github_releases',
+   'https://github.com/google-gemini/gemini-cli/releases', true, 2, 30, 'Google', 'GitHub releases feed.', null),
+  ('openai-release-notes', 'provider_news', 'OpenAI Release Notes', 'official_changelog',
+   'https://openai.com/products/release-notes/', true, 1, 20, 'OpenAI', 'Public release notes.', null),
+  ('anthropic-news', 'provider_news', 'Anthropic News', 'html',
+   'https://www.anthropic.com/news', true, 1, 30, 'Anthropic',
+   'Public news index; store headline and link only.', null),
+  ('google-blog-ai', 'provider_news', 'Google AI Blog', 'atom',
+   'https://blog.google/technology/ai/rss/', true, 1, 30, 'Google', 'RSS feed.', null),
+  ('openai-blog-rss', 'ai_news', 'OpenAI Blog', 'rss',
+   'https://openai.com/blog/rss.xml', true, 1, 30, 'OpenAI', 'RSS feed; store excerpt only.', null),
+  ('huggingface-blog', 'research', 'Hugging Face Blog', 'rss',
+   'https://huggingface.co/blog/feed.xml', true, 2, 120, 'Hugging Face', 'RSS feed.', null),
+  ('arxiv-cs-ai', 'research', 'arXiv cs.AI', 'atom',
+   'https://export.arxiv.org/rss/cs.AI', true, 2, 360, 'arXiv',
+   'arXiv terms apply; metadata and link only.', 'High volume — dedupe and cap items per run.'),
+  ('artificial-analysis-posts', 'research', 'Artificial Analysis methodology', 'html',
+   'https://artificialanalysis.ai/methodology', true, 2, 720, 'Artificial Analysis',
+   'Attribution required.', null),
+  ('x-monitored-accounts', 'social', 'X monitored accounts', 'social_api',
+   'https://developer.x.com/en/docs/x-api', false, 2, 60, 'X',
+   'Requires authorized API access. Never scrape X HTML as the foundation.',
+   'Disabled until X_BEARER_TOKEN is configured.'),
+  ('world-primary-wire', 'world_politics', 'World news primary wire', 'json',
+   'https://example.com/world-wire-api', false, 1, 30, 'Wire service',
+   'Requires a licensed provider. Headline, link and neutral summary only.',
+   'Separate adapter group; never feeds model or harness ranking.')
+on conflict (id) do update set
+  domain = excluded.domain,
+  name = excluded.name,
+  type = excluded.type,
+  url = excluded.url,
+  priority = excluded.priority,
+  cadence_minutes = excluded.cadence_minutes,
+  attribution = excluded.attribution,
+  licensing_note = excluded.licensing_note,
+  notes = excluded.notes;

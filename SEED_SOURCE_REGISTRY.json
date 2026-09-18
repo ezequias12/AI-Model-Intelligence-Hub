@@ -1,0 +1,71 @@
+{
+  "generated_at": "2026-09-18",
+  "note": "Seed registry. Agent must verify current URLs, terms and data shape before production use.",
+  "sources": [
+    {
+      "id": "artificial-analysis-api",
+      "domain": "models",
+      "name": "Artificial Analysis Data API",
+      "type": "api",
+      "url": "https://artificialanalysis.ai/data-api/docs",
+      "priority": 1,
+      "notes": "Primary model metrics source; attribution required; respect quota."
+    },
+    {
+      "id": "command-code-go",
+      "domain": "harness",
+      "name": "Command Code Go",
+      "type": "official_docs",
+      "url": "https://commandcode.ai/docs/plans/go",
+      "priority": 1
+    },
+    {
+      "id": "command-code-pricing",
+      "domain": "harness",
+      "name": "Command Code Pricing",
+      "type": "official_pricing",
+      "url": "https://commandcode.ai/pricing",
+      "priority": 1
+    },
+    {
+      "id": "opencode-go",
+      "domain": "harness",
+      "name": "OpenCode Go",
+      "type": "official_docs",
+      "url": "https://opencode.ai/v2/docs/console/go",
+      "priority": 1
+    },
+    {
+      "id": "kilo-pricing",
+      "domain": "harness",
+      "name": "Kilo Code Pricing",
+      "type": "official_pricing",
+      "url": "https://kilo.ai/pricing",
+      "priority": 1
+    },
+    {
+      "id": "claude-pricing",
+      "domain": "harness",
+      "name": "Claude Pricing",
+      "type": "official_pricing",
+      "url": "https://claude.com/pricing",
+      "priority": 1
+    },
+    {
+      "id": "freebuff",
+      "domain": "harness",
+      "name": "Freebuff",
+      "type": "official_site",
+      "url": "https://freebuff.ai/",
+      "priority": 1
+    },
+    {
+      "id": "openai-release-notes",
+      "domain": "ai_news",
+      "name": "OpenAI Release Notes",
+      "type": "official_changelog",
+      "url": "https://openai.com/products/release-notes/",
+      "priority": 1
+    }
+  ]
+}

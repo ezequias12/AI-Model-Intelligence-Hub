@@ -1,0 +1,34 @@
+LEÉ `START_HERE.md` Y TODOS LOS DOCUMENTOS QUE REFERENCIA.
+
+Implementá **AI Model Intelligence Hub** de punta a punta según esas especificaciones. El nombre canónico del repo es `AI-Model-Intelligence-Hub` y no debe cambiarse.
+
+Trabajá de forma autónoma mientras estoy offline.
+
+No pares después de scaffolding, frontend, documentación ni un build exitoso.
+Seguí implementando, testeando, arreglando y documentando hasta completar todos los criterios que no dependan de credenciales externas.
+
+Si falta una API key:
+- implementá el adapter real;
+- agregá fixtures;
+- agregá contract tests;
+- documentá la variable/configuración pendiente;
+- seguí con el resto.
+
+No me preguntes cosas rutinarias.
+Tomá decisiones razonables, registralas en ADRs y continuá.
+
+No hagas operaciones destructivas, irreversibles o pagas sin autorización.
+
+Antes de terminar:
+- corré lint;
+- typecheck;
+- tests;
+- build;
+- E2E cuando sea posible;
+- actualizá project-status;
+- implementation history;
+- changelog;
+- agent handoff;
+- Engram si está disponible.
+
+Quiero despertarme con el proyecto lo más cerca posible de conectar credenciales y desplegar.

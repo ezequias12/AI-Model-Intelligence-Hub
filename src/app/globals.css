@@ -1,0 +1,323 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * Design tokens.
+ *
+ * Neutrals carry a whisper of the brand hue (cyan-teal, chroma below 0.02) so
+ * surfaces read as authored rather than as empty grey. The interactive accent is
+ * deep cyan-teal: this product is a measurement instrument, and the accent is
+ * deliberately not the blue-violet every technology product reaches for.
+ *
+ * Both themes are first-class because the use scene demands both: an analyst
+ * works in a bright office and at night.
+ */
+@layer base {
+  :root {
+    /* System stacks on purpose: no network font fetch, so builds and offline
+       environments behave identically. Monospace is reserved for numbers and
+       identifiers, where it is a measurement voice rather than a costume. */
+    --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI",
+      Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    --font-mono: ui-monospace, "SFMono-Regular", "SF Mono", "Cascadia Mono", "Segoe UI Mono",
+      Consolas, "Liberation Mono", Menlo, monospace;
+
+    --background: 200 30% 99%;
+    --foreground: 205 30% 13%;
+
+    --surface: 200 22% 97%;
+    --surface-raised: 200 30% 99.5%;
+    --surface-sunken: 200 20% 94.5%;
+
+    --card: 200 30% 99.5%;
+    --card-foreground: 205 30% 13%;
+
+    --popover: 200 30% 99.5%;
+    --popover-foreground: 205 30% 13%;
+
+    --primary: 192 90% 30%;
+    --primary-foreground: 195 60% 98%;
+    --primary-muted: 192 60% 95%;
+
+    --secondary: 200 18% 95%;
+    --secondary-foreground: 205 24% 20%;
+
+    --muted: 200 18% 95%;
+    --muted-foreground: 205 14% 40%;
+
+    --accent: 200 20% 93%;
+    --accent-foreground: 205 28% 16%;
+
+    --destructive: 6 74% 42%;
+    --destructive-foreground: 6 60% 99%;
+    --destructive-muted: 6 70% 96%;
+
+    --success: 158 64% 27%;
+    --success-foreground: 158 50% 98%;
+    --success-muted: 158 46% 95%;
+
+    --warning: 28 90% 33%;
+    --warning-foreground: 30 80% 98%;
+    --warning-muted: 34 88% 94%;
+
+    /* Informational emphasis is a desaturated slate, not another bright hue:
+       it must not compete with the accent or with semantic states. */
+    --info: 214 20% 40%;
+    --info-foreground: 210 40% 98%;
+    --info-muted: 212 24% 95%;
+
+    --border: 200 14% 88%;
+    --input: 200 16% 84%;
+    --ring: 192 90% 34%;
+    --shadow-color: 205 40% 20%;
+
+    color-scheme: light;
+  }
+
+  .dark {
+    --background: 205 30% 8%;
+    --foreground: 200 16% 94%;
+
+    --surface: 205 26% 11%;
+    --surface-raised: 205 24% 13%;
+    --surface-sunken: 205 32% 6%;
+
+    --card: 205 24% 11.5%;
+    --card-foreground: 200 16% 94%;
+
+    --popover: 205 24% 13%;
+    --popover-foreground: 200 16% 94%;
+
+    --primary: 189 82% 58%;
+    --primary-foreground: 205 42% 9%;
+    --primary-muted: 192 40% 18%;
+
+    --secondary: 205 18% 18%;
+    --secondary-foreground: 200 16% 92%;
+
+    --muted: 205 18% 16%;
+    --muted-foreground: 200 11% 64%;
+
+    --accent: 205 20% 20%;
+    --accent-foreground: 200 16% 94%;
+
+    --destructive: 6 72% 62%;
+    --destructive-foreground: 6 40% 10%;
+    --destructive-muted: 6 34% 18%;
+
+    --success: 156 52% 52%;
+    --success-foreground: 156 40% 10%;
+    --success-muted: 156 26% 16%;
+
+    --warning: 38 88% 60%;
+    --warning-foreground: 34 50% 10%;
+    --warning-muted: 34 34% 17%;
+
+    --info: 212 16% 66%;
+    --info-foreground: 212 30% 10%;
+    --info-muted: 212 20% 20%;
+
+    --border: 205 16% 20%;
+    --input: 205 16% 24%;
+    --ring: 189 82% 58%;
+    --shadow-color: 205 60% 2%;
+
+    color-scheme: dark;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    scroll-padding-top: 5rem;
+  }
+
+  body {
+    @apply bg-background text-base text-foreground antialiased;
+    font-feature-settings: "cv05", "cv08", "ss01";
+  }
+
+  /* Headings balance their line breaks; prose avoids orphans. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Form controls inherit the type scale instead of the platform default, and
+     never drop below 1rem on small screens where iOS Safari would zoom the
+     viewport on focus. */
+  input,
+  select,
+  textarea,
+  button {
+    font: inherit;
+    color: inherit;
+  }
+
+  @media (max-width: 640px) {
+    input,
+    select,
+    textarea {
+      font-size: 1rem;
+    }
+  }
+
+  /* --- Browser surfaces -------------------------------------------------
+     Selection, caret, scrollbars, focus rings and underline offset ship with
+     platform defaults that belong to no design system. Theming them from the
+     palette is the cheapest signal that an interface was built rather than
+     assembled. */
+  ::selection {
+    background-color: hsl(var(--primary) / 0.22);
+  }
+
+  input,
+  textarea {
+    caret-color: hsl(var(--primary));
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border: 4px solid transparent;
+    border-radius: 999px;
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  a {
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+
+  /* Never remove the ring without a replacement. */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  /* Interactive surfaces respond immediately; nothing waits on a transition. */
+  a,
+  button,
+  [role="button"],
+  label,
+  summary,
+  select {
+    touch-action: manipulation;
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* Dense scroll containers opt in to an always-visible thin scrollbar. */
+  .scroll-thin {
+    scrollbar-width: thin;
+  }
+
+  /**
+   * Native dialog used by the command palette and the drawers. The dialog is
+   * given a full-viewport box on purpose: its only child is positioned, so a
+   * shrink-to-fit dialog would collapse to zero size and stop being usable for
+   * assistive technology and automated tests.
+   */
+  dialog.sheet {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    overscroll-behavior: contain;
+    background-color: transparent;
+    color: hsl(var(--foreground));
+  }
+
+  dialog.sheet::backdrop {
+    background-color: hsl(var(--shadow-color) / 0.5);
+    backdrop-filter: blur(2px) saturate(0.9);
+  }
+
+  /* Metadata separator. A hairline rule is a structural device; joining
+     fragments with a middle dot is a generated-UI tell. */
+  .meta-sep {
+    @apply inline-block h-3 w-px shrink-0 bg-border align-middle;
+  }
+}
+
+@layer utilities {
+  /* Comparison numerals must align in columns. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The measurement voice: monospace is earned here because every value in this
+     product is an observation. */
+  .measured {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "zero";
+  }
+
+  .hairline-y {
+    background-image: linear-gradient(
+      to bottom,
+      transparent,
+      hsl(var(--border)) 12%,
+      hsl(var(--border)) 88%,
+      transparent
+    );
+  }
+
+  /* Stagger driver for the single authored entrance sequence. */
+  .stagger > * {
+    animation-delay: calc(var(--stagger-index, 0) * 40ms);
+  }
+}

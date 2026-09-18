@@ -6,17 +6,22 @@
  * report exactly what happened. Nothing here hides a missing credential or a
  * parser that failed to match.
  */
-import { HttpClient } from "@/lib/adapters/http";
+import { HttpClient, isDeferralError } from "@/lib/adapters/http";
 import { fetchArtificialAnalysis, toPersistenceRows } from "@/lib/adapters/artificial-analysis";
 import { extractHarnessPage } from "@/lib/adapters/harness-html";
 import { feedToNewsItems } from "@/lib/adapters/rss";
 import { fetchSocialPosts } from "@/lib/adapters/social";
 import { fetchWorldNews } from "@/lib/adapters/world";
-import type { FetchLike } from "@/lib/adapters/types";
+import type { AdapterError, RateLimitState, FetchLike } from "@/lib/adapters/types";
 import { getRepository } from "@/lib/data";
 import { getDataMode } from "@/lib/data/mode";
 import { stableHash } from "@/lib/domain/hash";
 import type { HarnessPlanSnapshot, IngestionRun, NewsItem } from "@/lib/domain/schema";
+import {
+  buildHarnessChangeEvents,
+  buildModelChangeEvents,
+  latestSnapshotBy,
+} from "./change-events";
 import { HARNESS_CONFIG_BY_SOURCE } from "./harness-configs";
 import { createIngestionWriter } from "./writer";
 import {
@@ -164,10 +169,15 @@ async function runSource(
     if (source.domain === "models" && source.type === "api") {
       const result = await fetchArtificialAnalysis({ fetchImpl, now });
       if (!result.ok) {
-        return fail(
+        return await adapterFailureOutcome(
+          writer,
+          source.id,
+          "sync-models",
+          now,
           base,
-          result.error?.code === "not_configured" ? "not_configured" : "failed",
-          result.error?.message ?? "Adapter failed.",
+          result.error,
+          result.rateLimit,
+          "Adapter failed.",
         );
       }
 
@@ -183,11 +193,28 @@ async function runSource(
         );
       }
 
+      // Read the stored state before writing, so the diff compares against the
+      // previous snapshot rather than the one this run is about to insert.
+      const repository = await getRepository();
+      const previousByModel = latestSnapshotBy(
+        await repository.getModelSnapshots(),
+        (snapshot) => snapshot.modelId,
+        (snapshot) => snapshot.capturedAt,
+      );
+
       const providerSummary = await writer.writeProviders(payload.providers);
       const modelSummary = await writer.writeModels(payload.models);
       const snapshotSummary = await writer.writeModelSnapshots(payload.snapshots);
+      const changeSummary = await writer.writeChangeEvents(
+        buildModelChangeEvents(previousByModel, payload.snapshots),
+      );
 
-      const errors = [...providerSummary.errors, ...modelSummary.errors, ...snapshotSummary.errors];
+      const errors = [
+        ...providerSummary.errors,
+        ...modelSummary.errors,
+        ...snapshotSummary.errors,
+        ...changeSummary.errors,
+      ];
       if (errors.length > 0) {
         return fail(
           {
@@ -216,7 +243,7 @@ async function runSource(
         itemsWritten: modelSummary.written,
         itemsSkipped: result.skipped,
         rateLimitRemaining: result.rateLimit.remaining,
-        message: `Mapped ${result.items.length} models from Artificial Analysis.`,
+        message: `Mapped ${result.items.length} models from Artificial Analysis (${changeSummary.written} change events).`,
       });
     }
 
@@ -309,6 +336,11 @@ async function runSource(
 
       const repository = await getRepository();
       const plans = await repository.getHarnessPlans();
+      const previousByPlan = latestSnapshotBy(
+        await repository.getHarnessPlanSnapshots(),
+        (snapshot) => snapshot.planId,
+        (snapshot) => snapshot.capturedAt,
+      );
       const snapshots: HarnessPlanSnapshot[] = [];
 
       for (const plan of extraction.items) {
@@ -326,17 +358,29 @@ async function runSource(
       }
 
       const summary = await writer.writeHarnessSnapshots(snapshots);
+      const changeSummary = await writer.writeHarnessChangeEvents(
+        buildHarnessChangeEvents(
+          new Map(plans.map((plan) => [plan.id, plan])),
+          previousByPlan,
+          snapshots,
+        ),
+      );
+
       await recordRun(writer, source.id, "sync-harness-pricing", now, {
         itemsSeen: extraction.items.length,
         itemsWritten: summary.written,
         itemsSkipped: extraction.skipped,
         rateLimitRemaining: http.rateLimit.remaining,
         rateLimitResetAt: http.rateLimit.resetAt,
-        error: summary.errors[0] ?? null,
+        error: summary.errors[0] ?? changeSummary.errors[0] ?? null,
       });
 
-      if (summary.errors.length > 0) {
-        return fail(base, "failed", summary.errors[0] ?? "Write failed.");
+      if (summary.errors.length > 0 || changeSummary.errors.length > 0) {
+        return fail(
+          base,
+          "failed",
+          summary.errors[0] ?? changeSummary.errors[0] ?? "Write failed.",
+        );
       }
 
       return ok({
@@ -345,7 +389,7 @@ async function runSource(
         itemsWritten: summary.written,
         itemsSkipped: extraction.skipped,
         rateLimitRemaining: http.rateLimit.remaining,
-        message: `Extracted ${extraction.items.length} plans with config ${config.configVersion}.`,
+        message: `Extracted ${extraction.items.length} plans with config ${config.configVersion} (${changeSummary.written} change events).`,
       });
     }
 
@@ -356,10 +400,15 @@ async function runSource(
       const result = await fetchSocialPosts({ accounts, fetchImpl });
 
       if (!result.ok) {
-        return fail(
+        return await adapterFailureOutcome(
+          writer,
+          source.id,
+          "sync-social",
+          now,
           base,
-          result.error?.code === "not_configured" ? "not_configured" : "failed",
-          result.error?.message ?? "Social adapter failed.",
+          result.error,
+          result.rateLimit,
+          "Social adapter failed.",
         );
       }
 
@@ -402,10 +451,15 @@ async function runSource(
       });
 
       if (!result.ok) {
-        return fail(
+        return await adapterFailureOutcome(
+          writer,
+          source.id,
+          "sync-world-news",
+          now,
           base,
-          result.error?.code === "not_configured" ? "not_configured" : "failed",
-          result.error?.message ?? "World news adapter failed.",
+          result.error,
+          result.rateLimit,
+          "World news adapter failed.",
         );
       }
 
@@ -494,7 +548,7 @@ async function runSource(
     );
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : String(cause);
-    return fail(base, /rate limited/i.test(message) ? "deferred" : "failed", message);
+    return fail(base, isDeferralError(cause) ? "deferred" : "failed", message);
   }
 }
 
@@ -531,6 +585,49 @@ function fail(
   return { ...outcome, outcome: kind, message };
 }
 
+/** Maps an adapter error to the honest outcome: missing config, deferral or failure. */
+function classifyAdapterError(
+  error: AdapterError | null,
+): "not_configured" | "deferred" | "failed" {
+  if (!error) return "failed";
+  if (error.code === "not_configured") return "not_configured";
+  if (error.code === "rate_limited") return "deferred";
+  return isDeferralError(error.message) ? "deferred" : "failed";
+}
+
+/**
+ * Reports an adapter failure with the right outcome and, for a deferral, records
+ * a `rate_limited` ledger row so a quota brake reads as a deferral in the
+ * Sources workspace instead of as a failure (KI-1 / M1).
+ */
+async function adapterFailureOutcome(
+  writer: ReturnType<typeof createIngestionWriter>,
+  sourceId: string,
+  jobKey: string,
+  now: Date,
+  base: JobSourceOutcome,
+  error: AdapterError | null,
+  rateLimit: RateLimitState,
+  fallbackMessage: string,
+): Promise<JobSourceOutcome> {
+  const kind = classifyAdapterError(error);
+  const message = error?.message ?? fallbackMessage;
+
+  if (kind === "deferred" && writer.enabled) {
+    await recordRun(writer, sourceId, jobKey, now, {
+      itemsSeen: 0,
+      itemsWritten: 0,
+      itemsSkipped: 0,
+      rateLimitRemaining: rateLimit.remaining,
+      rateLimitResetAt: rateLimit.resetAt,
+      error: message,
+      status: "rate_limited",
+    });
+  }
+
+  return fail(base, kind, message);
+}
+
 function feedDomain(domain: string): NewsItem["domain"] {
   if (domain === "provider_news") return "provider";
   if (domain === "research") return "research";
@@ -555,13 +652,16 @@ async function recordRun(
     rateLimitRemaining: number | null;
     rateLimitResetAt: string | null;
     error: string | null;
+    /** Overrides the derived status; used to record a deferral as rate_limited. */
+    status?: IngestionRun["status"];
   },
 ): Promise<void> {
   const run: IngestionRun = {
     id: `run:${sourceId}:${now.toISOString()}`,
     sourceId,
     jobKey,
-    status: data.error ? (data.itemsWritten > 0 ? "partial" : "failed") : "success",
+    status:
+      data.status ?? (data.error ? (data.itemsWritten > 0 ? "partial" : "failed") : "success"),
     startedAt: now.toISOString(),
     finishedAt: new Date().toISOString(),
     itemsSeen: data.itemsSeen,

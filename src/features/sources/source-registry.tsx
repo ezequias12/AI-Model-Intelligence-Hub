@@ -444,27 +444,30 @@ function CapabilityPanel({ meta }: { meta: DataSourceMeta }): React.JSX.Element 
 
         <ul className="flex flex-col">
           {meta.capabilities.map((capability, index) => (
-            <React.Fragment key={capability.key}>
-              {index > 0 && <Divider />}
-              <li className="flex flex-wrap items-center justify-between gap-2 py-1.5 text-xs">
-                <span className="flex items-center gap-2">
-                  <span
-                    aria-hidden="true"
-                    className={cn(
-                      "h-1.5 w-1.5 rounded-full",
-                      capability.configured ? "bg-success" : "bg-muted-foreground",
-                    )}
-                  />
-                  <span className="font-medium">{capability.label}</span>
-                </span>
-                <span className="flex items-center gap-2">
-                  <span className="text-2xs text-muted-foreground">{capability.note}</span>
-                  <Badge variant={capability.configured ? "success" : "outline"}>
-                    {capability.configured ? "Configured" : "Not configured"}
-                  </Badge>
-                </span>
-              </li>
-            </React.Fragment>
+            <li
+              key={capability.key}
+              className={cn(
+                "flex flex-wrap items-center justify-between gap-2 py-1.5 text-xs",
+                index > 0 && "border-t border-border",
+              )}
+            >
+              <span className="flex items-center gap-2">
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "h-1.5 w-1.5 rounded-full",
+                    capability.configured ? "bg-success" : "bg-muted-foreground",
+                  )}
+                />
+                <span className="font-medium">{capability.label}</span>
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="text-2xs text-muted-foreground">{capability.note}</span>
+                <Badge variant={capability.configured ? "success" : "outline"}>
+                  {capability.configured ? "Configured" : "Not configured"}
+                </Badge>
+              </span>
+            </li>
           ))}
         </ul>
       </PanelBody>

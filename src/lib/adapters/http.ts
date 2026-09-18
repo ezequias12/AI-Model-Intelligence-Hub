@@ -45,6 +45,21 @@ export class QuotaGuardError extends Error {
   }
 }
 
+/**
+ * True when a failure means "come back later", not "this is broken".
+ *
+ * The quota guard and a persistent 429 are deliberate, benign deferrals: the
+ * run did nothing because it should not have, which must be reported as
+ * `deferred`/`rate_limited` rather than as a failure (KI-1).
+ */
+const DEFERRAL_PATTERN = /deferred request|rate limit|quota/i;
+
+export function isDeferralError(cause: unknown): boolean {
+  if (cause instanceof QuotaGuardError || cause instanceof RateLimitExceededError) return true;
+  const message = cause instanceof Error ? cause.message : String(cause);
+  return DEFERRAL_PATTERN.test(message);
+}
+
 export class HttpClient {
   private readonly fetchImpl: FetchLike;
   private readonly baseDelayMs: number;

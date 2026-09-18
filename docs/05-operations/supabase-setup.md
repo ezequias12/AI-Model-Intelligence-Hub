@@ -4,8 +4,8 @@ Persistence, snapshots, the ingestion ledger and change events live in Supabase 
 application never requires it: mock mode is the default. This guide covers applying the
 migrations, verifying the security model and generating types.
 
-The migrations in this repository have not been applied to a live project. Treat every step
-below as unverified until you run it.
+The migrations in this repository have not been applied to a live project from this repository.
+Treat every step below as unverified until you run it.
 
 ## 1. Create or select a project
 
@@ -42,6 +42,8 @@ or by pasting each file from `supabase/migrations/` into the SQL editor, in file
 | 4 | `20260918000400_news_social_harness_world.sql` | News, social, harness, world and watchlist tables, plus the harness-product foreign key on monitored accounts |
 | 5 | `20260918000500_indexes_and_rls.sql` | Indexes, RLS policies, grants |
 | 6 | `20260918000600_seed_source_registry.sql` | Seed rows for `public.sources` (upsert on `id`, safe to re-run) |
+| 7 | `20260918000700_seed_harness_catalog.sql` | Seed rows for `public.harness_products` and `public.harness_plans` (upsert on `id`, safe to re-run) |
+| 8 | `20260918000800_seed_monitored_social_accounts.sql` | Seed rows for `public.monitored_social_accounts` (upsert on `id`, safe to re-run) |
 
 File order matters: later files add foreign keys and constraints to earlier tables.
 
@@ -125,9 +127,7 @@ from public.ingestion_runs order by started_at desc limit 20;
 
 | Gap | Consequence |
 | --- | --- |
-| No job seeds `harness_products` or `harness_plans` | The pricing job extracts plans but finds no matching `canonical_plan_key`, so it writes no snapshots. Seed these rows manually or add a seeding job (backlog H1). |
-| No job seeds `monitored_social_accounts` | Social ingestion receives an empty account list and returns no posts (KI-7). |
-| No job writes `change_events` or `harness_change_events` | Change feeds are empty in live mode (KI-8). |
+| Provider grouping is not curated for live providers | `sync-models` writes every provider with `group: "other"`, `region: null`. The Models provider-group filters have nothing to match (KI-19). |
 | Nothing writes `private.raw_ingestion_payloads` | Raw payload capture is not implemented. |
 | No retention job | Snapshot and payload tables grow without a cleanup step. |
 | `private.is_service_role()` is unused by any policy | Write restriction relies on the absence of write policies, not on this helper. |

@@ -2,7 +2,7 @@
 
 - Date: 2026-09-18
 - Author: documentation phase
-- Status: Open (blocked on credentials)
+- Status: Resolved (live-verified 2026-09-18; see "Resolution" below)
 - Related: ADR-0003, `docs/04-data/artificial-analysis-field-map.md`
 
 ## Question
@@ -96,3 +96,41 @@ Specific areas where a live response is most likely to require a change:
    `IMPLEMENTED - LIVE VERIFICATION PENDING CREDENTIALS` to verified.
 5. While doing so, address KI-1 (quota-guard classification) so quota behaviour is observable
    correctly during the verification run.
+
+## Resolution (2026-09-18)
+
+A real API key became available. A read-only request was made and the adapter was reconciled.
+
+**What the live API returned.** `GET https://artificialanalysis.ai/api/v2/data/llms/models`
+returned HTTP 200 with **652 rows in one response**, no `pagination` block and no rate-limit
+headers (published limit: 1,000 requests/day). Rows expose `id`, `name`, `slug`,
+`model_creator`, `release_date`, `evaluations`, `pricing`,
+`median_output_tokens_per_second`, `median_time_to_first_token_seconds` and
+`median_time_to_first_answer_token`.
+
+**Defects found and fixed.**
+
+1. **Wrong endpoint.** The adapter called `/data/llm/models` (singular), which returns the
+   site's 404 HTML page. Corrected to `/data/llms/models`. Nothing had ever parsed a live row.
+2. **Field map drift.** Intelligence/coding/math are nested:
+   `evaluations.artificial_analysis_intelligence_index` and its coding/math siblings, not
+   top-level `intelligence_index`. The mapper now reads those keys; without the fix every
+   capability metric would have rendered as an em dash.
+3. **Pagination duplication.** With no `pagination` block, the old loop treated the full 652
+   rows as a "full page" and re-fetched the same list up to `maxPages` (20) times. The loop now
+   stops after the first page when the vendor supplies no pagination metadata.
+
+**Open answers from the list above.**
+
+- Q1–Q4, Q6, Q7 answered; the field map and rate-limit facts are recorded in
+  `docs/04-data/artificial-analysis-field-map.md`.
+- Q5 (math index): exposed as `evaluations.artificial_analysis_math_index`; can be `null` for a
+  model even when other indices are present.
+- Q8 (extra endpoints): the same API documents media (image/video/audio) endpoints; they are
+  out of scope for this product and were not integrated.
+- KI-1 was fixed at the same time (deferral classification).
+
+**Still open.** Persistence has not been exercised: no row has been written to a Supabase
+project from this repository. `contextWindow`, `openWeight`, `deprecatedAt`, cache prices and
+`agentic` are not exposed by the free API and stay `null`/`false` in live mode.
+

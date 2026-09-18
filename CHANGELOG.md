@@ -7,7 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- Artificial Analysis adapter verified against the live API: endpoint corrected to
+  `/data/llms/models`, capability metrics mapped from `evaluations.artificial_analysis_*`,
+  single-page handling for the free endpoint (which returns everything without a pagination
+  block), and a contract test rebuilt from a captured real response.
+- `src/lib/ingestion/change-events.ts`: derives `change_events` and `harness_change_events` from
+  snapshot diffs; the runner persists them after each successful sync.
+- `supabase/migrations/20260918000700_seed_harness_catalog.sql`: seeds harness products and plans
+  whose `canonical_plan_key` matches the extraction configuration.
+- `supabase/migrations/20260918000800_seed_monitored_social_accounts.sql`: seeds the twelve
+  accounts to monitor.
+- Automated WCAG audit (`tests/e2e/axe.spec.ts`, `@axe-core/playwright`) over fourteen routes in
+  both viewports, gating on serious and critical violations.
+- `tests/unit/change-events.test.ts`.
+
+### Changed
+
+- A quota-guard or persistent-429 deferral is classified as `deferred` and recorded as a
+  `rate_limited` ingestion run instead of a failure (KI-1 / M1).
+- The Artificial Analysis mapper reads the nested evaluation indices; fields the free API does not
+  expose (`contextWindow`, `openWeight`, `deprecatedAt`, cache prices, `agentic`) stay `null`/`false`
+  rather than being guessed.
+- Prettier `endOfLine` is now `auto`, so the format check passes on a CRLF Windows checkout.
+
+### Fixed
+
+- Accessibility defects surfaced by the axe audit: an `<hr>` directly inside the Sources capability
+  `<ul>`, scrollable Methodology tables without keyboard access, and unlabelled Recharts scatter
+  symbols on the landscape charts (the plot is now decorative; the data table is the accessible
+  equivalent).
 
 ## [0.1.0] - 2026-09-18
 

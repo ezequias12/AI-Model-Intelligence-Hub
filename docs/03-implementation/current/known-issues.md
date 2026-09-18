@@ -9,9 +9,13 @@ implementation as written.
 
 ## Correctness
 
-### KI-1 - A quota-guard deferral is reported as a failure
+### KI-1 - A quota-guard deferral is reported as a failure (resolved)
 
-Severity: medium.
+Severity: medium (resolved 2026-09-18).
+
+Resolved: `isDeferralError` in `src/lib/adapters/http.ts` classifies a quota guard and a
+persistent 429 as deferrals; the Artificial Analysis adapter returns `rate_limited`; the runner
+maps that to `deferred` and records a `rate_limited` ingestion run instead of a failure.
 
 `HttpClient` refuses to issue a request when the reported remaining quota is below
 `minRemaining`, throwing `QuotaGuardError` with the message
@@ -91,9 +95,14 @@ enabled but never producing items.
 
 Files: `src/lib/ingestion/runner.ts`, `src/lib/fixtures/sources.ts`.
 
-### KI-7 - Monitored social accounts are never seeded in live mode
+### KI-7 - Monitored social accounts are never seeded in live mode (resolved)
 
-Severity: medium in live mode.
+Severity: medium in live mode (resolved 2026-09-18).
+
+Resolved: `supabase/migrations/20260918000800_seed_monitored_social_accounts.sql` seeds the
+twelve accounts to monitor. The source `x-monitored-accounts` stays disabled until
+`X_BEARER_TOKEN` is configured; `provider_id` is left `null` until `sync-models` has created the
+provider rows.
 
 The social branch reads `repository.getMonitoredAccounts()` and then writes the same rows
 back. On a fresh database the table is empty, so the adapter receives zero accounts and
@@ -101,9 +110,13 @@ returns a successful result with no items and zero requests. Nothing populates t
 
 Files: `src/lib/ingestion/runner.ts`, `src/lib/adapters/social.ts`.
 
-### KI-8 - Harness change events and change events are never written
+### KI-8 - Harness change events and change events are never written (resolved)
 
-Severity: medium in live mode.
+Severity: medium in live mode (resolved 2026-09-18).
+
+Resolved: `src/lib/ingestion/change-events.ts` derives `change_events` from model snapshot diffs
+and `harness_change_events` from harness snapshot diffs; the runner writes both after each
+successful sync, and the diff is the gate, so an unchanged snapshot produces no event.
 
 `writer.writeChangeEvents` and `writer.writeHarnessChangeEvents` are implemented, but no job
 calls them. Change feeds in live mode are therefore empty; `change_events` and
@@ -111,15 +124,37 @@ calls them. Change feeds in live mode are therefore empty; `change_events` and
 
 Files: `src/lib/ingestion/{runner,writer}.ts`.
 
-### KI-9 - No job populates harness products or plans
+### KI-9 - No job populates harness products or plans (resolved)
 
-Severity: medium in live mode.
+Severity: medium in live mode (resolved 2026-09-18).
+
+Resolved: `supabase/migrations/20260918000700_seed_harness_catalog.sql` seeds the harness
+products and plans. The `canonical_plan_key` values match the `planKey` in
+`src/lib/ingestion/harness-configs.ts`, so the pricing job now finds a plan to attach a snapshot
+to.
 
 `writeHarnessProducts` and `writeHarnessPlans` exist but are unused, and the pricing job
 skips extracted plans whose `canonicalPlanKey` is not already present. A fresh database
 therefore attaches no snapshots.
 
 Files: `src/lib/ingestion/{runner,writer}.ts`.
+
+### KI-19 - Live providers lose the curated grouping
+
+Severity: medium in live mode.
+
+`sync-models` writes each provider with `group: "other"`, `region: null`, `countryCode: null` and
+`color: null`, because provider grouping is never inferred from the metric payload (ADR-0005). The
+curated grouping, region and brand colour exist only in the mock fixtures
+(`src/lib/fixtures/providers.ts`). In live mode the Models workspace provider-group filters
+(Mainstream / China-based / Open-weight) therefore have nothing to match and every provider renders
+as `Other`.
+
+Proper fix: seed the curated provider registry into `public.providers` and have `sync-models`
+preserve an existing curated group, region and colour instead of overwriting them.
+
+Files: `src/lib/adapters/artificial-analysis.ts`, `src/lib/ingestion/runner.ts`,
+`src/lib/fixtures/providers.ts`.
 
 ## Environment and configuration
 
@@ -156,15 +191,16 @@ Files: `src/lib/jobs/verify.ts`, `src/lib/data/mode.ts`.
 
 ## Testing and quality gates
 
-### KI-13 - No component tests and no axe accessibility automation
+### KI-13 - No component or DOM tests (axe now automated)
 
 Severity: low.
 
 The Playwright suite under `tests/e2e` covers the shell, Models, News, Harness, World and system
-workspaces, and the accessibility fundamentals (a single `h1` per route, a `main` landmark, no
-unlabelled interactive control, skip-link focus, table column headers and table captions). What is
-still missing: Testing Library is installed but no component/DOM test exists, and no axe dependency
-(`@axe-core/playwright`) is installed, so there is no full WCAG audit.
+workspaces, the accessibility fundamentals (a single `h1` per route, a `main` landmark, no
+unlabelled interactive control, skip-link focus, table column headers and table captions), and since
+2026-09-18 an axe audit (`tests/e2e/axe.spec.ts`, `@axe-core/playwright`) over fourteen routes in
+both viewports, gating on `serious` and `critical` WCAG violations. What is still missing: Testing
+Library is installed but no component/DOM test exists.
 
 Files: `tests/e2e/**`, `package.json`.
 

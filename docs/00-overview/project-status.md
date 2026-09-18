@@ -9,8 +9,8 @@ Evidence for each claim is a file path you can read. No test result, benchmark,
 coverage figure or live-response sample is claimed anywhere in this document: run
 `npm run check` to produce results on your machine.
 
-Last documentation update: 2026-09-18 (documentation phase, repository has no commits
-yet and every file is untracked).
+Last documentation update: 2026-09-18 (live-mode completion phase: Artificial Analysis verified
+against the live API, harness and social seeds added, change events wired, axe audit added).
 
 ## Status markers
 
@@ -54,14 +54,15 @@ yet and every file is untracked).
 | Methodology workspace driven by the metric registry | `IMPLEMENTED` | `src/features/methodology/methodology-content.tsx`, `src/lib/analytics/metric-registry.ts` |
 | Mock data mode (default) | `IMPLEMENTED` | `src/lib/data/mode.ts`, `src/lib/data/mock-repository.ts`, `src/lib/fixtures/**` |
 | Degraded live mode surfaced rather than hidden | `IMPLEMENTED` | `src/lib/data/index.ts` (`createDegradedRepository`), `src/components/ui/primitives.tsx` |
-| Playwright end-to-end specs | `IMPLEMENTED` | `tests/e2e/**` (shell, models, news, harness, world/system, accessibility fundamentals), `playwright.config.ts` (desktop and mobile projects) |
+| Playwright end-to-end specs | `IMPLEMENTED` | `tests/e2e/**` (shell, models, news, harness, world/system, accessibility fundamentals, axe audit), `playwright.config.ts` (desktop and mobile projects) |
+| Automated WCAG audit with axe | `IMPLEMENTED` | `tests/e2e/axe.spec.ts`, `@axe-core/playwright` |
 | CI workflow | `IMPLEMENTED` | `.github/workflows/ci.yml` (`quality` and `e2e` jobs) |
 
 ## 2. Implemented integration boundaries - live verification pending credentials
 
 | Capability | Status | Required variable(s) | What exists | What cannot be verified yet |
 | --- | --- | --- | --- | --- |
-| Artificial Analysis model metrics | `IMPLEMENTED - LIVE VERIFICATION PENDING CREDENTIALS` | `ARTIFICIAL_ANALYSIS_API_KEY` (optional `ARTIFICIAL_ANALYSIS_BASE_URL`) | Typed adapter, pagination, quota guard, 429/`Retry-After` handling, mapping to domain models, contract tests with a stubbed fetch | A real response never parsed here; real pagination and quota behaviour unverified |
+| Artificial Analysis model metrics | `IMPLEMENTED - LIVE-VERIFIED 2026-09-18 (persistence pending)` | `ARTIFICIAL_ANALYSIS_API_KEY` (optional `ARTIFICIAL_ANALYSIS_BASE_URL`) | Typed adapter, quota guard, 429/`Retry-After` handling, mapping to domain models, contract test built on a captured real response | Reading the live API and mapping it is verified. Writing the result to Supabase is not. The free API exposes no context window, open-weights flag, deprecation date, cache prices or agentic index, so those stay `null`/`false` live. |
 | Supabase persistence and live reads | `IMPLEMENTED - LIVE VERIFICATION PENDING CREDENTIALS` | `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Supabase repository, Zod row validation, idempotent writer with chunked upserts, six migrations | Migrations never applied here; RLS never exercised against a live project |
 | QStash schedules | `IMPLEMENTED - LIVE VERIFICATION PENDING CREDENTIALS` | `QSTASH_TOKEN`, `QSTASH_TARGET_BASE_URL` | `scripts/jobs/create-schedules.mjs` creates/deletes schedules idempotently for all seven jobs | No schedule was ever created |
 | QStash signature verification | `IMPLEMENTED - LIVE VERIFICATION PENDING CREDENTIALS` | `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY` | `src/lib/jobs/verify.ts` uses the Upstash `Receiver`; the job route rejects unverified requests in live mode | No real Upstash signature has been verified |
@@ -81,6 +82,9 @@ yet and every file is untracked).
 | Adapter result envelope, rate-limit capture, exponential backoff | `IMPLEMENTED` | `src/lib/adapters/types.ts`, `src/lib/adapters/http.ts` |
 | Ingestion-run ledger and idempotency keys | `IMPLEMENTED` | `src/lib/ingestion/runner.ts` (`recordRun`), `supabase/migrations/20260918000300_sources_and_ingestion.sql` |
 | Source registry as data, seeded by migration | `IMPLEMENTED` | `src/lib/fixtures/sources.ts`, `supabase/migrations/20260918000600_seed_source_registry.sql` |
+| Harness catalogue seed (products and plans) | `IMPLEMENTED` | `supabase/migrations/20260918000700_seed_harness_catalog.sql` |
+| Monitored social account seed | `IMPLEMENTED` | `supabase/migrations/20260918000800_seed_monitored_social_accounts.sql` |
+| Change-event persistence from snapshot diffs | `IMPLEMENTED` | `src/lib/ingestion/change-events.ts`, `src/lib/ingestion/runner.ts` |
 | Row-level security on every public table | `IMPLEMENTED` | `supabase/migrations/20260918000500_indexes_and_rls.sql` |
 | Private schema for operational data | `IMPLEMENTED` (schema and table only) | `20260918000100_init_schema.sql`, `20260918000300_sources_and_ingestion.sql` |
 | Benchmark tables (`benchmark_definitions`, `model_benchmark_values`) | `PARTIAL` | Tables exist in SQL; no application code reads or writes them |
@@ -92,7 +96,6 @@ yet and every file is untracked).
 | Item | Reason / note |
 | --- | --- |
 | LLM summarisation of news | No client exists. `LLM_SUMMARY_API_KEY` is reported as a capability only. The UI degrades to the source excerpt, and `feedToNewsItems` writes `summary: null`. |
-| Accessibility automation (axe) | No axe dependency in `package.json`. Structural accessibility assertions exist in `tests/e2e/accessibility.spec.ts`. |
 | Application authentication | No auth provider, no login route, no session handling. |
 | Supabase-backed watchlists | Local storage only, behind a `WatchlistStore` interface intended for replacement. |
 | Notifications, alerts or digests | No email, webhook or push channel. |
@@ -123,15 +126,17 @@ output. No result is claimed here.
 
 ## 6. What the owner must do next
 
-1. Set the values listed in section 2 in `.env.local` (see
-   `docs/05-operations/environment-variables.md`).
-2. Apply the migrations to a Supabase project (see
-   `docs/05-operations/supabase-setup.md`) and run
-   `npm run db:gen-types`.
-3. Verify the Artificial Analysis response shape against the adapter by running
-   `npm run jobs:run sync-models` against a live-mode deployment.
+1. Apply all eight migrations to a Supabase project (see
+   `docs/05-operations/supabase-setup.md`) and run `npm run db:gen-types`.
+2. Set the remaining values listed in section 2 in `.env.local`, then switch
+   `NEXT_PUBLIC_DATA_MODE=live`.
+3. Load live data: `npm run jobs:run sync-models` populates providers, models,
+   snapshots and change events. Provider grouping is still not curated for live
+   providers (known issue KI-19).
 4. Verify the harness pricing selectors against the current pages; fix the
    configuration version in `src/lib/ingestion/harness-configs.ts` when a pattern
    changes.
-5. Create the QStash schedules once the deployment URL exists.
-6. Choose a license and replace `LICENSE`.
+5. Configure `X_BEARER_TOKEN` and enable the `x-monitored-accounts` source to run
+   social ingestion; the accounts to monitor are already seeded.
+6. Create the QStash schedules once the deployment URL exists.
+7. Choose a license and replace `LICENSE`.

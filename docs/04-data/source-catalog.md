@@ -58,7 +58,7 @@ a registry entry only. It exists so provider-provenance attribution has a named 
 
 | Type | Adapter path | Notes |
 | --- | --- | --- |
-| `api` | `fetchArtificialAnalysis` (models domain only) | Quota-aware, paginated, `x-api-key` |
+| `api` | `fetchArtificialAnalysis` (models domain only) | Quota-aware, `x-api-key`. Verified live 2026-09-18: `GET /api/v2/data/llms/models` returns all 652 rows in one response with **no `pagination` block**; the adapter stops after page 1 when no pagination metadata is present. No rate-limit headers were observed on that endpoint; the published limit is 1,000 requests/day. |
 | `rss`, `atom` | `feedToNewsItems` | Dependency-free RSS 2.0 / Atom parser |
 | `official_pricing`, `official_site` | `extractHarnessPage` with a registered config | Requires a config in `src/lib/ingestion/harness-configs.ts`, otherwise the source fails with an explanatory message |
 | `github_releases` | `feedToNewsItems` against `<url>.atom` | The `.atom` suffix is appended if absent |

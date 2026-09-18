@@ -19,6 +19,7 @@ recorded, not hidden: each item states the cost of leaving it and the cost of fi
 | Hand-shaped client interface cast in the Supabase repository | Same cause: no generated types | Loses compile-time query checking; a column rename is not caught by `tsc` | Same as above |
 | Row validation logs and skips an invalid row | Keeps one bad row from blanking a page | Failure is a console line, not a metric; a persistent validation failure can go unnoticed | Count and expose validation failures per table in the Sources workspace |
 | Duplicate sources of current state (`models` plus the newest snapshot) | Snapshots are append-only history, the current table is a fast read path | The two can diverge if the snapshot write succeeds and the model write fails; the run is marked `partial` or `failed` but reconciliation is manual | Add a reconciliation query or write current state from the newest snapshot in a single transaction |
+| Live providers are not curated (KI-19) | The adapter cannot infer grouping (ADR-0005) and the curated registry lives only in the mock fixtures | The Models provider-group filters (Mainstream / China-based) have nothing to match in live mode; every provider renders as `Other` | Seed the curated provider registry into `public.providers` and make `sync-models` preserve an existing group, region and colour instead of overwriting them |
 
 ## Ingestion
 
@@ -54,7 +55,7 @@ recorded, not hidden: each item states the cost of leaving it and the cost of fi
 | --- | --- | --- | --- |
 | No performance or coverage gate in CI | The workflow runs the correctness stages only (format, lint, typecheck, tests, build) | A bundle-size or coverage regression passes CI unnoticed | Record `next build` route sizes and compare them in the `quality` job (see `docs/06-quality/performance-budgets.md`) |
 | Testing Library installed but unused | Added for future component tests | An unused dependency, and rendering behaviour has no automated coverage | Add component tests or remove the dependency |
-| No axe integration | No dependency installed | Accessibility regressions are caught by review only | Add `@axe-core/playwright` and assert on the main workspaces |
+| axe integration (resolved 2026-09-18) | The dependency and spec were added; the gate is `serious`/`critical` only | Moderate and minor findings are surfaced but not enforced | Raise the gate once the backlog of moderate findings is cleared |
 | Dead exports (`previousSnapshot`, `signingKeysConfigured`) | Left behind by refactors | Misleads a reader into thinking they are part of a flow | Delete or use them |
 
 ## Documentation

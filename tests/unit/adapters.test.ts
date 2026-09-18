@@ -8,6 +8,7 @@ import {
 } from "@/lib/adapters/rss";
 import {
   HttpClient,
+  isDeferralError,
   QuotaGuardError,
   RateLimitExceededError,
   parseRetryAfter,
@@ -189,6 +190,23 @@ describe("parseRetryAfter", () => {
   it("returns null for unusable input", () => {
     expect(parseRetryAfter(null)).toBeNull();
     expect(parseRetryAfter("soon")).toBeNull();
+  });
+});
+
+describe("isDeferralError", () => {
+  it("treats the quota guard and a persistent rate limit as deferrals", () => {
+    expect(isDeferralError(new QuotaGuardError(0, 1))).toBe(true);
+    expect(isDeferralError(new RateLimitExceededError("Rate limited by x", null))).toBe(true);
+  });
+
+  it("recognises a deferral from a bare message, so a mapped adapter error still classifies", () => {
+    expect(isDeferralError("Deferred request: 0 quota remaining, 1 required.")).toBe(true);
+    expect(isDeferralError("Rate limited by https://example.com after 4 attempts.")).toBe(true);
+  });
+
+  it("does not treat a genuine transport failure as a deferral", () => {
+    expect(isDeferralError(new Error("socket hang up"))).toBe(false);
+    expect(isDeferralError("HTTP 404 from https://example.com")).toBe(false);
   });
 });
 

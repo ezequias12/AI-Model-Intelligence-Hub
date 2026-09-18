@@ -46,26 +46,42 @@ afterEach(() => {
 /* Artificial Analysis contract                                                */
 /* -------------------------------------------------------------------------- */
 
+// Captured from a live GET /data/llms/models response on 2026-09-18 and trimmed
+// to two rows. The field names, the nested `evaluations` object and the absence
+// of a `pagination` block are the real shape; the second row is the malformed
+// case the mapper must skip.
 const AA_PAYLOAD = {
   status: 200,
+  prompt_options: { parallel_queries: 1, prompt_length: "medium" },
   data: [
     {
-      id: "1",
-      slug: "gpt-5-2",
-      name: "GPT-5.2",
-      release_date: "2026-08-15T00:00:00.000Z",
-      model_creator: { id: 1, name: "OpenAI", slug: "openai" },
-      intelligence_index: 72,
-      coding_index: 74,
-      agentic_index: 76,
-      median_output_tokens_per_second: 92,
-      median_time_to_first_token_seconds: 1.9,
-      context_window: 400000,
-      pricing: {
-        price_1m_input_tokens: 1.75,
-        price_1m_output_tokens: 14,
-        price_1m_cache_hit_tokens: 0.175,
+      id: "3e87c73e-a257-495e-9730-367a66229811",
+      name: "Claude Fable 5.1",
+      slug: "claude-fable-5-1",
+      release_date: "2026-09-01",
+      model_creator: {
+        id: "f0aa413f-e8ae-4fcd-9c48-0e049f4f3128",
+        name: "Anthropic",
+        slug: "anthropic",
       },
+      evaluations: {
+        artificial_analysis_intelligence_index: 53.4,
+        artificial_analysis_coding_index: 81.6,
+        artificial_analysis_math_index: null,
+        gpqa: 0.937,
+        hle: 0.591,
+        scicode: 0.631,
+        tau2: null,
+        terminalbench_v2_1: 0.913857677902622,
+      },
+      pricing: {
+        price_1m_blended_3_to_1: 20,
+        price_1m_input_tokens: 10,
+        price_1m_output_tokens: 50,
+      },
+      median_output_tokens_per_second: 69.394,
+      median_time_to_first_token_seconds: 157.639,
+      median_time_to_first_answer_token: 157.639,
       unexpected_future_field: "ignored",
     },
     {
@@ -73,7 +89,6 @@ const AA_PAYLOAD = {
       // A row without a `name` is not a usable model and must be skipped.
     },
   ],
-  pagination: { page: 1, page_size: 100, total_pages: 1, has_more: false },
 };
 
 describe("Artificial Analysis adapter", () => {
@@ -96,11 +111,63 @@ describe("Artificial Analysis adapter", () => {
     expect(result.skipped).toBe(1);
 
     const mapped = result.items[0]!;
-    expect(mapped.model.slug).toBe("gpt-5-2");
-    expect(mapped.providerSlug).toBe("openai");
-    expect(mapped.model.metrics.intelligence).toBe(72);
-    expect(mapped.model.metrics.cacheReadPricePerMillion).toBe(0.175);
+    expect(mapped.model.slug).toBe("claude-fable-5-1");
+    expect(mapped.providerSlug).toBe("anthropic");
+    expect(mapped.model.metrics.intelligence).toBe(53.4);
+    expect(mapped.model.metrics.coding).toBe(81.6);
+    expect(mapped.model.metrics.math).toBeNull();
+    expect(mapped.model.metrics.inputPricePerMillion).toBe(10);
+    expect(mapped.model.metrics.outputPricePerMillion).toBe(50);
+    expect(mapped.model.metrics.contextWindow).toBeNull();
     expect(mapped.model.openWeight).toBe(false);
+    expect(mapped.model.releaseDate).toBe("2026-09-01");
+  });
+
+  it("requests the documented /data/llms/models endpoint once when there is no pagination", async () => {
+    const urls: string[] = [];
+    const fetchImpl: FetchLike = async (url) => {
+      urls.push(url);
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: () => null },
+        text: async () => JSON.stringify(AA_PAYLOAD),
+        json: async () => AA_PAYLOAD,
+      };
+    };
+
+    const result = await fetchArtificialAnalysis({ apiKey: "test", fetchImpl, now: NOW });
+
+    expect(result.requests).toBe(1);
+    expect(urls).toHaveLength(1);
+    expect(urls[0]).toContain("/data/llms/models");
+    expect(urls[0]).not.toContain("/data/llm/models");
+  });
+
+  it("does not re-fetch the full list when a full page carries no pagination metadata", async () => {
+    const urls: string[] = [];
+    const fetchImpl: FetchLike = async (url) => {
+      urls.push(url);
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: () => null },
+        text: async () => JSON.stringify(AA_PAYLOAD),
+        json: async () => AA_PAYLOAD,
+      };
+    };
+
+    // pageSize 1 makes the response a "full page" of 2 rows; the old loop kept
+    // requesting page 2, 3, ... and duplicated the same models.
+    const result = await fetchArtificialAnalysis({
+      apiKey: "test",
+      fetchImpl,
+      now: NOW,
+      pageSize: 1,
+    });
+
+    expect(result.requests).toBe(1);
+    expect(urls).toHaveLength(1);
   });
 
   it("tolerates an unknown extra field without breaking", () => {
@@ -185,6 +252,23 @@ describe("Artificial Analysis adapter", () => {
 
     const result = await fetchArtificialAnalysis({ apiKey: "test", client, now: NOW });
     expect(result.ok).toBe(false);
+    expect(result.error?.retryable).toBe(true);
+  });
+
+  it("classifies a quota-guard refusal as a retryable rate limit, not a transport failure", async () => {
+    const client = new HttpClient({
+      fetchImpl: async () => {
+        throw new Error("the quota guard must refuse before any request is issued");
+      },
+      sleep: async () => undefined,
+    });
+    client.rateLimit = { remaining: 0, limit: 100, resetAt: null };
+
+    const result = await fetchArtificialAnalysis({ apiKey: "test", client, now: NOW });
+
+    expect(result.ok).toBe(false);
+    expect(result.error?.code).toBe("rate_limited");
+    expect(result.error?.message).toContain("Deferred request");
     expect(result.error?.retryable).toBe(true);
   });
 });

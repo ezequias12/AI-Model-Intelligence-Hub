@@ -242,7 +242,7 @@ export function MethodologyContent(): React.JSX.Element {
         description="Every value shown as current carries its age, measured against per-domain thresholds."
       >
         <div className="flex flex-col gap-2">
-          <div className="scroll-thin overflow-x-auto">
+          <div className="scroll-thin overflow-x-auto" tabIndex={0}>
             <table className="w-full min-w-[560px] border-collapse text-xs">
               <caption className="sr-only">
                 Freshness thresholds per domain, with the state each age range maps to.
@@ -295,7 +295,7 @@ export function MethodologyContent(): React.JSX.Element {
         title="Metric catalogue"
         description={`${metrics.length} metrics. Direction, provenance, unit and description for each.`}
       >
-        <div className="scroll-thin overflow-x-auto">
+        <div className="scroll-thin overflow-x-auto" tabIndex={0}>
           <table className="w-full min-w-[900px] border-collapse text-xs">
             <caption className="sr-only">
               Every metric the product can rank, chart, filter or export, with its direction,

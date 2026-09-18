@@ -9,7 +9,6 @@ The first section is blocked on credentials or live pages; the rest is unblocked
 
 | # | Item | Outcome | Files |
 | --- | --- | --- | --- |
-| B1 | Verify the Artificial Analysis response shape and pagination against the live API | Confirm field names, page count and quota headers; adjust the adapter and the contract test stub if the real envelope differs | `src/lib/adapters/artificial-analysis.ts`, `tests/integration/adapters-contract.test.ts` |
 | B2 | Apply the migrations and generate Supabase types | Replace the hand-shaped client cast with generated types | `supabase/migrations/**`, `npm run db:gen-types`, `src/lib/data/supabase-repository.ts` |
 | B3 | Verify harness pricing selectors against the current pages | Either confirm `configVersion` `2026.09.1` or bump it and fix the patterns; add a captured fixture per page | `src/lib/ingestion/harness-configs.ts`, `tests/unit/adapters.test.ts` |
 | B4 | Create the QStash schedules and confirm signature verification end to end | One successful scheduled run per job recorded in `ingestion_runs` | `scripts/jobs/create-schedules.mjs`, `src/lib/jobs/verify.ts` |
@@ -20,27 +19,30 @@ The first section is blocked on credentials or live pages; the rest is unblocked
 
 | # | Item | Outcome | Files |
 | --- | --- | --- | --- |
-| H1 | Add a persisted seed for harness products and plans | A fresh database has harness rows so the pricing job can attach snapshots; add a migration or a seeding job | new migration, `src/lib/ingestion/runner.ts` |
-| H2 | Persist change events from diffs | Model and harness change feeds become available in live mode, not only in fixtures | `src/lib/ingestion/runner.ts`, `src/lib/ingestion/writer.ts` (`writeChangeEvents`, `writeHarnessChangeEvents` already exist) |
 | H3 | Add an HTML news-index adapter | Sources registered as `type: "html"` (for example `anthropic-news`) currently report `deferred` | `src/lib/adapters/` (new module), `src/lib/ingestion/runner.ts` |
 | H4 | Populate `providerIds` and `entities` for ingested news | Provider filtering and entity chips work outside mock mode | `src/lib/ingestion/runner.ts` (pass `providerSlugs`), entity extraction from `src/lib/adapters/social.ts` |
 | H5 | Derive news categories from content | Ingested news is currently always `other` (or `research`) | `src/lib/ingestion/runner.ts`, new classifier |
 | H6 | Implement raw payload capture with sanitization and retention | `private.raw_ingestion_payloads` becomes useful for debugging parser breakage | `src/lib/ingestion/writer.ts`, new maintenance SQL |
 | H7 | Implement the retention cleanup query | Make `cleanup-raw-ingestion` actually delete expired rows | `src/lib/ingestion/runner.ts`, new migration or SQL file |
-| H10 | Add component and accessibility tests | Testing Library is installed but unused; axe is absent | `tests/**`, `package.json` |
+| H10 | Add component tests | axe is now automated; Testing Library is still installed but unused | `tests/**` |
 
 ## Recently completed
 
 | # | Item | Evidence |
 | --- | --- | --- |
+| B1 | Verify the Artificial Analysis response shape and pagination against the live API | `src/lib/adapters/artificial-analysis.ts` (endpoint `/data/llms/models`, nested `evaluations.*`, single-shot when no pagination), contract test built on a captured real response |
+| H1 | Add a persisted seed for harness products and plans | `supabase/migrations/20260918000700_seed_harness_catalog.sql` |
+| H2 | Persist change events from diffs | `src/lib/ingestion/change-events.ts`, wired in `src/lib/ingestion/runner.ts` |
+| KI-7 | Seed monitored social accounts | `supabase/migrations/20260918000800_seed_monitored_social_accounts.sql` |
+| M1 | Fix the quota-guard error classification | `isDeferralError` in `src/lib/adapters/http.ts`; runner records a `rate_limited` run |
 | H8 | Add a CI workflow | `.github/workflows/ci.yml` (`quality` and `e2e` jobs) |
 | H9 | Add Playwright E2E specs | `tests/e2e/**` covering shell, models, news, harness, world/system and accessibility fundamentals |
+| H10 | Add automated accessibility auditing with axe (second half of H10) | `tests/e2e/axe.spec.ts`, `@axe-core/playwright` |
 
 ## Unblocked, medium value
 
 | # | Item | Outcome | Files |
 | --- | --- | --- | --- |
-| M1 | Fix the quota-guard error classification | A quota deferral should be reported as `deferred`, not `network` or `failed` | `src/lib/adapters/http.ts`, `src/lib/adapters/artificial-analysis.ts`, `src/lib/ingestion/runner.ts` |
 | M2 | Correct the `payloadHash` comment | It says `sha256`; the implementation is a 16-character FNV-1a hash | `src/lib/domain/schema.ts`, `src/lib/domain/hash.ts` |
 | M3 | Remove or use dead exports | `previousSnapshot()` in fixtures and `signingKeysConfigured()` in verify are unused | `src/lib/fixtures/snapshots.ts`, `src/lib/jobs/verify.ts` |
 | M4 | Distinguish `null` capability from below-threshold in rankings | Models with `null` intelligence are currently kept by the capability gate | `src/lib/analytics/index.ts` |

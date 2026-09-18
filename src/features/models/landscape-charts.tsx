@@ -224,7 +224,12 @@ function ChartCard({ initial }: { initial: ChartConfig }): React.JSX.Element {
         </div>
 
         <CardContent className="px-2 py-3">
-          <div className="h-[300px] w-full">{body}</div>
+          {/* Recharts marks every scatter symbol as role="img" with no name and
+              offers no way to label it, so the plot is decorative here and the
+              accessible data table below is its screen-reader equivalent. */}
+          <div className="h-[300px] w-full" aria-hidden="true">
+            {body}
+          </div>
 
           <div className="mt-2 flex flex-wrap items-center gap-2 px-2">
             <ToggleChip active={showFrontier} onClick={() => setShowFrontier((value) => !value)}>
@@ -256,7 +261,9 @@ function ChartCard({ initial }: { initial: ChartConfig }): React.JSX.Element {
           {toolbar}
         </div>
         <div className="p-4">
-          <div className="h-[62vh] w-full">{body}</div>
+          <div className="h-[62vh] w-full" aria-hidden="true">
+            {body}
+          </div>
         </div>
       </Modal>
     </>

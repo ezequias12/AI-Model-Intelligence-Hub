@@ -73,8 +73,9 @@ sample is claimed here.
 | Job HTTP endpoint with per-source outcomes | `IMPLEMENTED` | `src/app/api/jobs/[job]/route.ts` |
 | Schedule creation script | `IMPLEMENTED - LIVE VERIFICATION PENDING CREDENTIALS` | `scripts/jobs/create-schedules.mjs` |
 | Local job runner | `IMPLEMENTED` | `scripts/jobs/run-local.mjs` |
-| Harness product / plan seeding job | `NOT IMPLEMENTED` | The writer has `writeHarnessProducts` and `writeHarnessPlans`, but no job calls them |
-| Change-event persistence from diffs | `NOT IMPLEMENTED` | `writer.writeChangeEvents` and `writeHarnessChangeEvents` exist but the runner never calls them; change events are derived for fixtures and in the UI |
+| Harness product / plan catalogue seed | `IMPLEMENTED` | `supabase/migrations/20260918000700_seed_harness_catalog.sql` |
+| Monitored social account seed | `IMPLEMENTED` | `supabase/migrations/20260918000800_seed_monitored_social_accounts.sql` |
+| Change-event persistence from diffs | `IMPLEMENTED` | `src/lib/ingestion/change-events.ts`; the runner writes model and harness change events after each sync |
 | Raw payload capture | `NOT IMPLEMENTED` | Nothing writes to `private.raw_ingestion_payloads` |
 | Raw payload retention cleanup | `NOT IMPLEMENTED` | `runMaintenance()` returns a message and deletes nothing |
 | Distributed locking between concurrent runs | `NOT IMPLEMENTED` | Idempotency is key-based only |
@@ -85,7 +86,7 @@ sample is claimed here.
 | --- | --- | --- |
 | Shared result envelope and error codes | `IMPLEMENTED` | `src/lib/adapters/types.ts` |
 | HTTP client: quota guard, `Retry-After`, backoff, header capture | `IMPLEMENTED` | `src/lib/adapters/http.ts`; `tests/unit/adapters.test.ts` |
-| Artificial Analysis Data API | `IMPLEMENTED - LIVE VERIFICATION PENDING CREDENTIALS` (`ARTIFICIAL_ANALYSIS_API_KEY`) | `src/lib/adapters/artificial-analysis.ts` |
+| Artificial Analysis Data API | `IMPLEMENTED - LIVE-VERIFIED 2026-09-18 (persistence pending)` (`ARTIFICIAL_ANALYSIS_API_KEY`) | `src/lib/adapters/artificial-analysis.ts` |
 | RSS 2.0 and Atom parser | `IMPLEMENTED` | `src/lib/adapters/rss.ts` |
 | Harness pricing-page extractor | `IMPLEMENTED - LIVE VERIFICATION PENDING CREDENTIALS` (selectors unverified against live pages) | `src/lib/adapters/harness-html.ts`, `src/lib/ingestion/harness-configs.ts` |
 | Social / X API contract | `IMPLEMENTED - LIVE VERIFICATION PENDING CREDENTIALS` (`X_BEARER_TOKEN`) | `src/lib/adapters/social.ts` |
@@ -149,7 +150,7 @@ sample is claimed here.
 | Integration | `IMPLEMENTED` | `tests/integration/{adapters-contract,repository}.test.ts` |
 | Component / DOM | `NOT IMPLEMENTED` | Testing Library is installed but no component tests exist |
 | End-to-end | `IMPLEMENTED` | `tests/e2e/{shell,models,news,harness,world-and-system,accessibility}.spec.ts`, `playwright.config.ts` (desktop and mobile) |
-| Accessibility automation | `PARTIAL` | Structural assertions (single `h1`, `main` landmark, labelled controls, skip-link focus, table headers/captions) in `tests/e2e/accessibility.spec.ts`; no axe dependency, so no full WCAG audit |
+| Accessibility automation | `IMPLEMENTED` | `tests/e2e/accessibility.spec.ts` (structural assertions) plus `tests/e2e/axe.spec.ts` (`@axe-core/playwright`, a serious/critical gate over fourteen routes in both viewports) |
 | CI | `IMPLEMENTED` | `.github/workflows/ci.yml` (`quality` and `e2e` jobs) |
 
 Details, including what each file covers, are in `docs/06-quality/testing-strategy.md`.
@@ -166,4 +167,4 @@ Details, including what each file covers, are in `docs/06-quality/testing-strate
 | `LICENSE` | `PARTIAL` | Placeholder only; the owner must choose a license |
 | `.env.example` | `IMPLEMENTED` | Names and comments only, no values |
 | Documentation set | `IMPLEMENTED` | `docs/**` |
-| Git history | `NOT IMPLEMENTED` | The repository has no commits; every file is untracked |
+| Git history | `PARTIAL` | One commit (`a659239`); the live-mode completion changes are uncommitted |

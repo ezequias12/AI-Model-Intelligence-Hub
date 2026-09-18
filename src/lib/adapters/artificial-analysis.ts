@@ -13,7 +13,7 @@
 import { z } from "zod";
 import type { Model, ModelSnapshot, Provider } from "@/lib/domain/schema";
 import { hashPayload } from "@/lib/domain/hash";
-import { HttpClient } from "./http";
+import { HttpClient, isDeferralError } from "./http";
 import {
   adapterFailure,
   adapterSuccess,
@@ -35,16 +35,18 @@ const creatorSchema = z
   .partial();
 
 /**
- * Field map (see docs/04-data/artificial-analysis-field-map.md):
- *   intelligence_index            -> metrics.intelligence
- *   coding_index                  -> metrics.coding
- *   agentic_index / tau_bench     -> metrics.agentic
- *   math_index / aime             -> metrics.math
- *   median_output_tokens_per_second -> metrics.outputSpeedTps
- *   median_time_to_first_token_seconds -> metrics.ttftSeconds
- *   pricing.{price_1m_input_tokens, price_1m_output_tokens,
- *            price_1m_cache_hit_tokens, price_1m_cache_write_tokens}
- *   context_window / max_context_tokens -> metrics.contextWindow
+ * Field map (verified against a live `/data/llms/models` response on 2026-09-18;
+ * see docs/04-data/artificial-analysis-field-map.md):
+ *   evaluations.artificial_analysis_intelligence_index -> metrics.intelligence
+ *   evaluations.artificial_analysis_coding_index       -> metrics.coding
+ *   evaluations.artificial_analysis_math_index         -> metrics.math
+ *   median_output_tokens_per_second                    -> metrics.outputSpeedTps
+ *   median_time_to_first_token_seconds                 -> metrics.ttftSeconds
+ *   pricing.price_1m_input_tokens                      -> metrics.inputPricePerMillion
+ *   pricing.price_1m_output_tokens                     -> metrics.outputPricePerMillion
+ *
+ * The free API exposes no agentic index, context window, open-weights flag or
+ * deprecation date. Those map to null/false rather than to a guessed value.
  */
 export const artificialAnalysisModelSchema = z
   .object({
@@ -159,12 +161,24 @@ export function mapArtificialAnalysisModel(
   const pricing = raw.pricing ?? {};
 
   const metrics = {
-    intelligence: asNumber(raw.intelligence_index),
-    coding: asNumber(raw.coding_index) ?? pickEvaluation(raw.evaluations, ["coding", "swe_bench"]),
+    intelligence:
+      asNumber(raw.intelligence_index) ??
+      pickEvaluation(raw.evaluations, [
+        "artificial_analysis_intelligence_index",
+        "intelligence_index",
+      ]),
+    coding:
+      asNumber(raw.coding_index) ??
+      pickEvaluation(raw.evaluations, ["artificial_analysis_coding_index", "coding_index"]),
+    // The free API exposes no agentic index. tau2/tau-bench are 0-1 fractions,
+    // and mixing them into a 0-100 index would be misleading, so agentic stays
+    // null until the vendor publishes a comparable index.
     agentic:
       asNumber(raw.agentic_index) ??
-      pickEvaluation(raw.evaluations, ["agentic", "tau_bench", "tool_use"]),
-    math: asNumber(raw.math_index) ?? pickEvaluation(raw.evaluations, ["math", "aime", "math_500"]),
+      pickEvaluation(raw.evaluations, ["artificial_analysis_agentic_index", "agentic_index"]),
+    math:
+      asNumber(raw.math_index) ??
+      pickEvaluation(raw.evaluations, ["artificial_analysis_math_index", "math_index"]),
     outputSpeedTps: asNumber(raw.median_output_tokens_per_second),
     ttftSeconds: asNumber(raw.median_time_to_first_token_seconds),
     inputPricePerMillion: asNumber(pricing.price_1m_input_tokens),
@@ -268,7 +282,7 @@ export async function fetchArtificialAnalysis(
 
   try {
     for (let page = 1; page <= maxPages; page += 1) {
-      const url = `${baseUrl}/data/llm/models?page=${page}&page_size=${pageSize}`;
+      const url = `${baseUrl}/data/llms/models?page=${page}&page_size=${pageSize}`;
       const payload = await client.request<unknown>(url, {
         headers: { "x-api-key": apiKey },
         minRemaining: options.minRemaining ?? 1,
@@ -305,8 +319,14 @@ export async function fetchArtificialAnalysis(
         collected.push(mapArtificialAnalysisModel(model.data, capturedAt));
       }
 
-      const hasMore = parsed.data.pagination?.has_more === true;
-      const totalPages = parsed.data.pagination?.total_pages;
+      const pagination = parsed.data.pagination;
+      // The free endpoint returns the whole set in one response with no
+      // pagination block. Paginate only when the vendor says there is more;
+      // otherwise the same full list would be fetched again on every page.
+      if (!pagination) break;
+
+      const hasMore = pagination.has_more === true;
+      const totalPages = pagination.total_pages;
       if (!hasMore && (totalPages === undefined || page >= totalPages)) break;
       if (rows.length < pageSize && !hasMore) break;
     }
@@ -320,10 +340,11 @@ export async function fetchArtificialAnalysis(
     });
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : String(cause);
-    const rateLimited = /rate limited/i.test(message);
+    // A quota-guard refusal is a benign deferral, not a transport failure.
+    const deferred = isDeferralError(cause);
     return adapterFailure(
       {
-        code: rateLimited ? "rate_limited" : "network",
+        code: deferred ? "rate_limited" : "network",
         message,
         retryable: true,
         retryAfterMs: null,

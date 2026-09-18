@@ -3,6 +3,65 @@
 Append-only record of working sessions. Newest entries first. Each entry states what was done, what
 was verified (and how), and what was left open. Do not rewrite past entries.
 
+## 2026-09-18 - Live-mode completion, Artificial Analysis verification and axe
+
+**Scope:** close the credential-free backlog (harness/social seeds, change-event persistence, quota-guard
+classification, axe), and verify the Artificial Analysis integration now that an API key exists. Out of
+scope: applying migrations to a live Supabase project, QStash schedules, X and world-news providers,
+deployment.
+
+**What was done**
+
+1. **H1 seed.** `supabase/migrations/20260918000700_seed_harness_catalog.sql` seeds harness products and
+   plans whose `canonical_plan_key` equals the extraction `planKey`, so the pricing job can attach a
+   snapshot.
+2. **H2 change events.** New `src/lib/ingestion/change-events.ts` derives `change_events` (from model
+   snapshot diffs) and `harness_change_events` (from harness snapshot diffs); the runner writes them
+   after each successful sync, gated by the diff.
+3. **KI-7 seed.** `20260918000800_seed_monitored_social_accounts.sql` seeds the twelve social accounts;
+   `provider_id` stays null until `sync-models` creates the providers.
+4. **KI-1 / M1.** `isDeferralError` in `src/lib/adapters/http.ts` classifies a quota guard and a
+   persistent 429 as deferrals; the AA adapter returns `rate_limited`; the runner reports `deferred` and
+   records a `rate_limited` ingestion run.
+5. **H10 axe.** Added `@axe-core/playwright` 4.13.0 and `tests/e2e/axe.spec.ts` (fourteen routes, both
+   viewports, serious/critical gate).
+6. **Artificial Analysis live verification.** Found and fixed three defects: the endpoint was the
+   singular `/data/llm/models` (404); capability metrics are nested under `evaluations.artificial_analysis_*`;
+   and the free endpoint returns everything with no pagination block, which the old loop re-fetched up to
+   20 times. The contract test now uses a captured real response.
+7. **Accessibility fixes from axe.** `<hr>` removed from directly inside the Sources capability `<ul>`;
+   `tabIndex` added to the two scrollable Methodology tables; the landscape chart plot marked
+   `aria-hidden` (Recharts ships `role="img"` with no name) with the existing data table as the
+   accessible equivalent.
+8. **Tooling.** Prettier `endOfLine` set to `auto` so `format:check` passes on a CRLF Windows checkout.
+9. **Docs.** Reconciled the field map, source review, source catalog, project status, implementation
+   status, backlog, known-issues (KI-1/7/8/9 resolved, KI-13 updated, KI-19 added), technical debt,
+   Supabase setup, testing strategy, this log, the handoff and a new phase record.
+
+**Verified**
+
+- `npm run check` exits 0: Prettier, ESLint, `tsc --noEmit`, **241 unit and integration tests**, and a
+  **26-route** production build.
+- `npm run test:e2e` passes **205 tests** and skips 5 (210 total) across `chromium-desktop` and
+  `chromium-mobile`, including the 28 axe cases.
+- A live `GET https://artificialanalysis.ai/api/v2/data/llms/models` returned HTTP 200 with **652 rows**
+  and no pagination block; the mapper was reconciled against the real field names.
+
+**Not done**
+
+- Migrations were not applied to a Supabase project from this repository; `npm run db:gen-types` was not
+  run; no row was written through the service role.
+- Harness pricing selectors were not checked against the live pages.
+- `X_BEARER_TOKEN` and the world news provider are still unconfigured.
+- No component/DOM test was added.
+
+**Open**
+
+- KI-19: live providers all carry `group: "other"`; the provider-group filters need a curated provider
+  seed and a sync that preserves it.
+- Raw payload capture and retention deletion remain unimplemented.
+- The changes are uncommitted.
+
 ## 2026-09-18 - UI redesign, hydration fix and E2E verification session
 
 **Scope:** Complete UI redesign following GitHub UI skills guidelines (Anthropic `frontend-design`, Vercel `web-design-guidelines`, `impeccable`, `accessibility`), fix the React hydration mismatch bug (#418) caused by relative time rendering in static routes, and re-verify the full gate including Playwright E2E.

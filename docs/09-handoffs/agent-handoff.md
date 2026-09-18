@@ -20,46 +20,47 @@ order, and what will mislead you.
 The application is complete as a product and fully usable without credentials, because mock mode is
 a first-class mode: every workspace renders from deterministic fixtures and the UI labels them.
 Domain logic, analytics, adapters, the repository layer, ingestion, migrations, CI and tests are all
-in place. The UI has undergone a complete design overhaul (cyan-teal system, removal of AI tells,
-role-based radii, border-only elevation) with the React #418 static route hydration bug resolved via
-`<RelativeTime>`. The full gate has been verified post-redesign: `npm run check` exits 0 (format, lint,
-typecheck, 222 unit and integration tests, a 26-route production build) and `npm run test:e2e` passes
-177 tests across the desktop and mobile projects. Nothing that requires a third-party credential has
-ever executed against the live service, so six capabilities are marked
-`IMPLEMENTED - LIVE VERIFICATION PENDING CREDENTIALS`. No job seeds harness products, plans or
-monitored social accounts, and no job writes change events, so several live-mode feeds would be empty
-even with credentials configured. Accessibility automation is structural only; axe is not installed.
+in place. **Artificial Analysis is now verified against the live API** (endpoint, field map and
+single-page behaviour reconciled), and the credential-free gaps are closed: harness products and plans
+are seeded, monitored social accounts are seeded, and the runner persists model and harness change
+events. Five capabilities remain `IMPLEMENTED - LIVE VERIFICATION PENDING CREDENTIALS`: Supabase
+persistence, QStash schedules and signature verification, X social ingestion and the world news
+provider. Accessibility is now audited with axe over fourteen routes. The main live-mode defect still
+open is that providers are not curated, so every live provider is `group: "other"` and the
+provider-group filters have nothing to match (KI-19). No result is claimed here; run `npm run check`
+and `npm run test:e2e`.
 
 ## What to do first
 
-Pick exactly one of these, in this order of preference.
+**Artificial Analysis is already verified** (2026-09-18): endpoint `/data/llms/models`, nested
+`evaluations.artificial_analysis_*`, no pagination block, contract test built on a captured real
+response. Do not re-verify it; extend it only if the vendor adds fields.
 
 ### If you have credentials
 
-1. **Verify Artificial Analysis.** Set `ARTIFICIAL_ANALYSIS_API_KEY`, then
-   `NEXT_PUBLIC_DATA_MODE=live npm run jobs:run sync-models`. Capture the real response, replace the
-   hand-written stub in `tests/integration/adapters-contract.test.ts` with a fixture of it, and
-   reconcile the field map. The open questions are listed in
-   `docs/08-research/source-reviews/artificial-analysis.md`.
-2. **Apply and verify Supabase.** Follow `docs/05-operations/supabase-setup.md`, then run
-   `npm run db:gen-types` and replace the hand-shaped client cast in
-   `src/lib/data/supabase-repository.ts`. Verify RLS by attempting an anonymous write: it must fail.
-3. **Create the QStash schedules** and confirm one accepted trigger per job. Then confirm that an
-   unsigned POST is rejected with 401 in live mode.
+1. **Apply and verify Supabase.** Follow `docs/05-operations/supabase-setup.md`. There are **eight**
+   migrations: apply all of them, including `20260918000700_seed_harness_catalog.sql` and
+   `20260918000800_seed_monitored_social_accounts.sql`. Run `npm run db:gen-types` and replace the
+   hand-shaped client cast in `src/lib/data/supabase-repository.ts`. Verify RLS by attempting an
+   anonymous write: it must fail.
+2. **Load live data.** `NEXT_PUBLIC_DATA_MODE=live npm run jobs:run sync-models` writes providers,
+   models, snapshots and change events. Then `sync-harness-pricing` writes plan snapshots.
+3. **Curate providers (KI-19).** Live providers are all `group: "other"`. Seed the curated provider
+   registry and make `sync-models` preserve an existing curated group, region and colour.
+4. **Create the QStash schedules** and confirm one accepted trigger per job, then that an unsigned
+   POST is rejected with 401 in live mode.
+5. **Configure `X_BEARER_TOKEN`** and enable the `x-monitored-accounts` source; its accounts are
+   already seeded.
 
 ### If you do not have credentials
 
-1. **Seed harness products and plans** (backlog H1) so the pricing job has plans to attach snapshots
-   to. Without it, harness snapshots can never be written in live mode. This is now the single
-   highest-leverage change.
-2. **Persist change events from diffs** (backlog H2). `writer.writeChangeEvents` and
-   `writer.writeHarnessChangeEvents` already exist and are unused; wiring them makes the Releases
-   and Changes feeds real in live mode.
-3. **Seed monitored social accounts** (backlog H3) so the social job has accounts to poll.
-4. **Fix KI-1** (backlog M1): report a quota-guard deferral as `deferred` rather than `failed`. It is
-   a small change with a clear payoff, and it makes the later live verification readable.
-5. **Add axe** (backlog H10). The Playwright suite already asserts structural accessibility
-   fundamentals; axe would extend it to a real audit.
+1. **Curate providers (KI-19).** This is the highest-leverage remaining item: without it the
+   provider-group filters are dead in live mode.
+2. **Add the HTML news-index adapter** (H3/KI-6) so `type: "html"` sources (for example
+   `anthropic-news`) stop reporting `deferred`.
+3. **Populate `providerIds` and `entities` for ingested news** (H4/KI-4) and **derive news
+   categories from content** (H5/KI-5).
+4. **Implement raw payload capture and retention** (H6/H7).
 
 Do not start by adding features. The gaps above are about the product telling the truth about
 itself, which is the property this repository is built around.
@@ -81,19 +82,21 @@ itself, which is the property this repository is built around.
 
 | Trap | Reality |
 | --- | --- |
-| Assuming the suite has not been run | It has. The last session recorded the exact results in `docs/09-handoffs/session-log.md`: `npm run check` exits 0 and `npx playwright test` passes 177 tests. Re-run both before trusting them for your own change |
+| Assuming the suite has not been run | It has. The last session recorded the exact results in `docs/09-handoffs/session-log.md`: `npm run check` exits 0 (format, lint, typecheck, 241 unit and integration tests, a 26-route build) and `npm run test:e2e` passes 205 tests and skips 5 across both projects. Re-run both before trusting them for your own change |
 | `npm run dev` failing with `Module parse failed: Unexpected character '@'` on `@tailwind base` | A globally exported `NODE_ENV=production` makes Next.js compile in production mode and break the CSS pipeline. `npm run dev` goes through `scripts/dev.mjs`, which pins `NODE_ENV=development`. Do not bypass that script |
 | The same environment variable also silently skips devDependencies | With `NODE_ENV=production`, `npm install` omits `devDependencies`. Use `npm ci --include=dev` |
-| `npm run test:e2e` reporting nothing to run | It does run: six spec files under `tests/e2e`, executed against the `chromium-desktop` and `chromium-mobile` projects. Playwright builds and starts the app on port 3100 in mock mode first, so a clean run takes a couple of minutes |
-| A dashboard full of em dashes after connecting Artificial Analysis | The mapper returns `null` for an absent field, so a renamed field looks like missing data rather than an error. Compare against the field map in `docs/04-data/artificial-analysis-field-map.md` |
-| A job reporting `failed` with "Deferred request: ..." | That is the quota guard being misclassified (KI-1), not a defect |
+| `npm run test:e2e` reporting nothing to run | It does run: seven spec files under `tests/e2e`, executed against the `chromium-desktop` and `chromium-mobile` projects. Playwright builds and starts the app on port 3100 in mock mode first, so a clean run takes a couple of minutes. If it fails instantly with "Executable doesn't exist", run `npx playwright install chromium` |
+| A dashboard full of em dashes after connecting Artificial Analysis | The mapper returns `null` for an absent field, so a renamed field looks like missing data rather than an error. Compare against the field map in `docs/04-data/artificial-analysis-field-map.md`. Note the free API genuinely does not expose `context_window`, `open_weights`, `deprecated`, cache prices or an agentic index, so those are always `null`/`false` live |
+| Artificial Analysis returning 404 HTML | The endpoint is `/data/llms/models` (plural). The singular `/data/llm/models` serves the site's 404 page. Fixed 2026-09-18; do not regress it |
+| A job reporting `deferred` with "Deferred request: ..." | Correct since 2026-09-18: a quota guard and a persistent 429 are classified as deferrals and recorded as a `rate_limited` run (KI-1, resolved). `failed` with that message means the classification regressed |
 | A source showing as enabled that never produces items | `type: "html"` news sources have no adapter (KI-6) |
 | `NEXT_PUBLIC_DATA_MODE` changed but nothing happened | The repository and fixtures are memoised per process (KI-11); restart. Also, `NEXT_PUBLIC_` values are build-time, so a deployment needs a redeploy |
-| Harness pricing source reporting `deferred` with "No adapter registered" | The source `type` is not `official_pricing`, `official_site`, `rss`, `atom`, `social_api` or `github_releases`. Check the dispatch table in `docs/01-architecture/ingestion-architecture.md` |
-| `writeHarnessProducts`, `writeHarnessPlans`, `writeChangeEvents`, `writeHarnessChangeEvents` | Implemented but unused by any job. Do not assume they run |
+| Harness pricing source reporting `deferred` with "No adapter registered" | The source `type` is not `official_pricing`, `official_site`, `rss`, `atom`, `social_api` or `github_releases`. Note `opencode-go` is `official_docs` with a config, so it is **not** fetched |
+| `writeHarnessProducts`, `writeHarnessPlans` (writer) | Implemented but still unused by any job: the harness catalogue is seeded by migration, not by the writer. `writeChangeEvents` and `writeHarnessChangeEvents` **are** now called by the runner |
 | `benchmark_definitions` and `model_benchmark_values` | Tables exist; no code reads or writes them |
 | `private.raw_ingestion_payloads` | Table and retention index exist; nothing writes to it and nothing deletes from it |
 | `previousSnapshot()` in fixtures and `signingKeysConfigured()` in verify | Dead exports |
+| Harness plans or social accounts missing on a fresh database | The seeds are migrations `0007` and `0008`. A database created before 2026-09-18 must apply them, or the pricing job writes no snapshots and the social job polls nothing |
 
 ## Documentation rules
 
@@ -114,7 +117,7 @@ itself, which is the property this repository is built around.
 
 | Thread | Where it is tracked |
 | --- | --- |
-| Credential verification for six capabilities | `docs/00-overview/project-status.md` section 2 |
+| Credential verification for the remaining five capabilities | `docs/00-overview/project-status.md` section 2 |
 | Ordered next work with file-level detail | `docs/03-implementation/current/backlog.md` |
 | Defects and rough edges | `docs/03-implementation/current/known-issues.md` |
 | Deliberate shortcuts and their cost | `docs/03-implementation/current/technical-debt.md` |
@@ -122,7 +125,8 @@ itself, which is the property this repository is built around.
 | Speculative ideas, not work | `docs/07-product/future-ideas.md` |
 | Source review open questions | `docs/08-research/source-reviews/artificial-analysis.md` |
 | Provider metadata options | `docs/08-research/alternatives/provider-metadata-sources.md` |
-| No git history, license undecided | `LICENSE`, `docs/00-overview/project-status.md` section 6 |
+| One commit exists, license undecided | `LICENSE`, `docs/00-overview/project-status.md` section 6 |
+| Live provider grouping not curated (KI-19) | `docs/03-implementation/current/known-issues.md` |
 
 ## When you finish
 

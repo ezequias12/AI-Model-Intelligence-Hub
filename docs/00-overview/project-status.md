@@ -9,8 +9,8 @@ Evidence for each claim is a file path you can read. No test result, benchmark,
 coverage figure or live-response sample is claimed anywhere in this document: run
 `npm run check` to produce results on your machine.
 
-Last documentation update: 2026-09-18 (live-mode completion phase: Artificial Analysis verified
-against the live API, harness and social seeds added, change events wired, axe audit added).
+Last documentation update: 2026-09-18 (community/news pivot: X out of scope, Bluesky + Hacker
+News + GDELT added, model garden extended with OpenRouter and Hugging Face popularity, ADR-0009).
 
 ## Status markers
 
@@ -66,7 +66,10 @@ against the live API, harness and social seeds added, change events wired, axe a
 | Supabase persistence and live reads | `IMPLEMENTED - LIVE VERIFICATION PENDING CREDENTIALS` | `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Supabase repository, Zod row validation, idempotent writer with chunked upserts, six migrations | Migrations never applied here; RLS never exercised against a live project |
 | QStash schedules | `IMPLEMENTED - LIVE VERIFICATION PENDING CREDENTIALS` | `QSTASH_TOKEN`, `QSTASH_TARGET_BASE_URL` | `scripts/jobs/create-schedules.mjs` creates/deletes schedules idempotently for all seven jobs | No schedule was ever created |
 | QStash signature verification | `IMPLEMENTED - LIVE VERIFICATION PENDING CREDENTIALS` | `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY` | `src/lib/jobs/verify.ts` uses the Upstash `Receiver`; the job route rejects unverified requests in live mode | No real Upstash signature has been verified |
-| Social / X ingestion | `IMPLEMENTED - LIVE VERIFICATION PENDING CREDENTIALS` | `X_BEARER_TOKEN` | Adapter against the documented X API v2 shape, monitored-account registry, entity extraction, contract tests | No authorized API call has been made; the source stays disabled |
+| Community signals (Bluesky + Hacker News) | `IMPLEMENTED` | none (public, key-less) | Bluesky AppView and Hacker News Algolia adapters, monitored-account registry, entity extraction, contract tests | Coverage is thinner than X; no live call has been made from this repository |
+| Model garden breadth (OpenRouter) | `IMPLEMENTED` | none (public) | `/api/v1/models` adapter; adds catalogue breadth and context window only, never the routed price | No live call made from this repository |
+| Open-weight popularity (Hugging Face) | `IMPLEMENTED` | none (public) | Hub adapter enriching matched models with downloads and likes | Popularity only, never capability; slug matching is fuzzy |
+| News + World (GDELT) | `IMPLEMENTED` | none (public) | GDELT DOC 2.0 adapter feeding `news_items` and `world_news_items` | Keyword queries; no country inference |
 | World and political news | `IMPLEMENTED - LIVE VERIFICATION PENDING CREDENTIALS` | `WORLD_NEWS_API_KEY`, `WORLD_NEWS_BASE_URL` | Separate adapter group with a neutrality gate, cursor pagination, contract tests | No licensed provider has been called; the source stays disabled |
 | Harness pricing-page extraction | `IMPLEMENTED - LIVE VERIFICATION PENDING CREDENTIALS` | None (public pages) | Versioned selector configs for seven pricing pages, required-field failure, raw source hashing, unit tests against fixtures | Selector patterns have not been verified against the current live pages |
 | LLM news summaries | `NOT IMPLEMENTED` (see section 4) | `LLM_SUMMARY_API_KEY` | Only capability reporting in `src/lib/data/mode.ts` | No summariser client exists; `NewsItem.summary` is always `null` |
@@ -85,6 +88,9 @@ against the live API, harness and social seeds added, change events wired, axe a
 | Harness catalogue seed (products and plans) | `IMPLEMENTED` | `supabase/migrations/20260918000700_seed_harness_catalog.sql` |
 | Monitored social account seed | `IMPLEMENTED` | `supabase/migrations/20260918000800_seed_monitored_social_accounts.sql` |
 | Change-event persistence from snapshot diffs | `IMPLEMENTED` | `src/lib/ingestion/change-events.ts`, `src/lib/ingestion/runner.ts` |
+| Multi-source model merge with field precedence | `IMPLEMENTED` | `src/lib/ingestion/merge-models.ts`, `src/lib/ingestion/runner.ts` |
+| Hugging Face popularity metrics | `IMPLEMENTED` | `src/lib/analytics/metric-registry.ts`, `supabase/migrations/20260918001000_add_popularity_metrics.sql` |
+| Curated provider registry seed | `IMPLEMENTED` | `supabase/migrations/20260918001200_seed_provider_registry.sql` |
 | Row-level security on every public table | `IMPLEMENTED` | `supabase/migrations/20260918000500_indexes_and_rls.sql` |
 | Private schema for operational data | `IMPLEMENTED` (schema and table only) | `20260918000100_init_schema.sql`, `20260918000300_sources_and_ingestion.sql` |
 | Benchmark tables (`benchmark_definitions`, `model_benchmark_values`) | `PARTIAL` | Tables exist in SQL; no application code reads or writes them |
@@ -126,17 +132,17 @@ output. No result is claimed here.
 
 ## 6. What the owner must do next
 
-1. Apply all eight migrations to a Supabase project (see
+1. Apply all **fifteen** migrations to a Supabase project (see
    `docs/05-operations/supabase-setup.md`) and run `npm run db:gen-types`.
 2. Set the remaining values listed in section 2 in `.env.local`, then switch
    `NEXT_PUBLIC_DATA_MODE=live`.
 3. Load live data: `npm run jobs:run sync-models` populates providers, models,
-   snapshots and change events. Provider grouping is still not curated for live
-   providers (known issue KI-19).
+   snapshots, popularity and change events from Artificial Analysis, OpenRouter and
+   Hugging Face. `sync-social` reads Bluesky and Hacker News with no credential;
+   `sync-ai-news` and `sync-world-news` read GDELT with no credential.
 4. Verify the harness pricing selectors against the current pages; fix the
    configuration version in `src/lib/ingestion/harness-configs.ts` when a pattern
    changes.
-5. Configure `X_BEARER_TOKEN` and enable the `x-monitored-accounts` source to run
-   social ingestion; the accounts to monitor are already seeded.
+5. Tune the GDELT queries in `src/lib/adapters/gdelt.ts` for the coverage you want.
 6. Create the QStash schedules once the deployment URL exists.
 7. Choose a license and replace `LICENSE`.

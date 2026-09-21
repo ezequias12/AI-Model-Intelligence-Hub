@@ -1,17 +1,18 @@
 /**
- * Fixture monitored social accounts and posts.
+ * Fixture monitored accounts and community posts.
  *
- * FIXTURE DATA. Social ingestion runs through the authorized-API adapter
- * contract; this file only supplies deterministic samples for mock mode.
+ * FIXTURE DATA. Community ingestion runs through the key-less Bluesky and
+ * Hacker News adapters; this file only supplies deterministic samples for mock
+ * mode. Handles are plausible placeholders, not a claim about a live account.
  */
 import type { MonitoredAccount, SocialPost } from "@/lib/domain/schema";
 
 export const MONITORED_ACCOUNT_SEEDS: Array<Omit<MonitoredAccount, "id"> & { slug: string }> = [
   {
     slug: "openai",
-    handle: "@OpenAI",
+    handle: "@openai.bsky.social",
     displayName: "OpenAI",
-    platform: "x",
+    platform: "bluesky",
     accountCategory: "model_provider",
     providerId: "provider:openai",
     harnessProductId: null,
@@ -19,9 +20,9 @@ export const MONITORED_ACCOUNT_SEEDS: Array<Omit<MonitoredAccount, "id"> & { slu
   },
   {
     slug: "anthropic",
-    handle: "@AnthropicAI",
+    handle: "@anthropic.bsky.social",
     displayName: "Anthropic",
-    platform: "x",
+    platform: "bluesky",
     accountCategory: "model_provider",
     providerId: "provider:anthropic",
     harnessProductId: null,
@@ -29,9 +30,9 @@ export const MONITORED_ACCOUNT_SEEDS: Array<Omit<MonitoredAccount, "id"> & { slu
   },
   {
     slug: "googledeepmind",
-    handle: "@GoogleDeepMind",
+    handle: "@googledeepmind.bsky.social",
     displayName: "Google DeepMind",
-    platform: "x",
+    platform: "bluesky",
     accountCategory: "model_provider",
     providerId: "provider:google",
     harnessProductId: null,
@@ -39,9 +40,9 @@ export const MONITORED_ACCOUNT_SEEDS: Array<Omit<MonitoredAccount, "id"> & { slu
   },
   {
     slug: "xai",
-    handle: "@xai",
+    handle: "@xai.bsky.social",
     displayName: "xAI",
-    platform: "x",
+    platform: "bluesky",
     accountCategory: "model_provider",
     providerId: "provider:xai",
     harnessProductId: null,
@@ -49,9 +50,9 @@ export const MONITORED_ACCOUNT_SEEDS: Array<Omit<MonitoredAccount, "id"> & { slu
   },
   {
     slug: "deepseek",
-    handle: "@deepseek_ai",
+    handle: "@deepseek.bsky.social",
     displayName: "DeepSeek",
-    platform: "x",
+    platform: "bluesky",
     accountCategory: "model_provider",
     providerId: "provider:deepseek",
     harnessProductId: null,
@@ -59,9 +60,9 @@ export const MONITORED_ACCOUNT_SEEDS: Array<Omit<MonitoredAccount, "id"> & { slu
   },
   {
     slug: "alibaba-qwen",
-    handle: "@Alibaba_Qwen",
+    handle: "@qwen.bsky.social",
     displayName: "Qwen",
-    platform: "x",
+    platform: "bluesky",
     accountCategory: "model_provider",
     providerId: "provider:alibaba",
     harnessProductId: null,
@@ -69,9 +70,9 @@ export const MONITORED_ACCOUNT_SEEDS: Array<Omit<MonitoredAccount, "id"> & { slu
   },
   {
     slug: "moonshot",
-    handle: "@MoonshotAI",
+    handle: "@moonshot.bsky.social",
     displayName: "Moonshot AI",
-    platform: "x",
+    platform: "bluesky",
     accountCategory: "model_provider",
     providerId: "provider:moonshot",
     harnessProductId: null,
@@ -79,9 +80,9 @@ export const MONITORED_ACCOUNT_SEEDS: Array<Omit<MonitoredAccount, "id"> & { slu
   },
   {
     slug: "artificialanalysis",
-    handle: "@ArtificialAnlys",
+    handle: "@artificialanalysis.bsky.social",
     displayName: "Artificial Analysis",
-    platform: "x",
+    platform: "bluesky",
     accountCategory: "benchmark_org",
     providerId: null,
     harnessProductId: null,
@@ -89,9 +90,9 @@ export const MONITORED_ACCOUNT_SEEDS: Array<Omit<MonitoredAccount, "id"> & { slu
   },
   {
     slug: "commandcode",
-    handle: "@commandcode",
+    handle: "@commandcode.bsky.social",
     displayName: "Command Code",
-    platform: "x",
+    platform: "bluesky",
     accountCategory: "coding_harness",
     providerId: null,
     harnessProductId: "harness:command-code",
@@ -99,9 +100,9 @@ export const MONITORED_ACCOUNT_SEEDS: Array<Omit<MonitoredAccount, "id"> & { slu
   },
   {
     slug: "opencode",
-    handle: "@opencode_ai",
+    handle: "@opencode.bsky.social",
     displayName: "OpenCode",
-    platform: "x",
+    platform: "bluesky",
     accountCategory: "coding_harness",
     providerId: null,
     harnessProductId: "harness:opencode",
@@ -109,9 +110,9 @@ export const MONITORED_ACCOUNT_SEEDS: Array<Omit<MonitoredAccount, "id"> & { slu
   },
   {
     slug: "kilo",
-    handle: "@kilocode",
+    handle: "@kilocode.bsky.social",
     displayName: "Kilo Code",
-    platform: "x",
+    platform: "bluesky",
     accountCategory: "coding_harness",
     providerId: null,
     harnessProductId: "harness:kilo-code",
@@ -119,12 +120,22 @@ export const MONITORED_ACCOUNT_SEEDS: Array<Omit<MonitoredAccount, "id"> & { slu
   },
   {
     slug: "gemini-cli",
-    handle: "@geminicli",
+    handle: "@geminicli.bsky.social",
     displayName: "Gemini CLI",
-    platform: "x",
+    platform: "bluesky",
     accountCategory: "coding_harness",
     providerId: "provider:google",
     harnessProductId: "harness:gemini-cli",
+    enabled: true,
+  },
+  {
+    slug: "hackernews",
+    handle: "@HackerNews",
+    displayName: "Hacker News",
+    platform: "hackernews",
+    accountCategory: "other",
+    providerId: null,
+    harnessProductId: null,
     enabled: true,
   },
 ];
@@ -281,6 +292,28 @@ const POST_SEEDS: PostSeed[] = [
     reposts: 402,
     replies: 155,
   },
+  {
+    id: "hn-01",
+    accountSlug: "hackernews",
+    minutesAgo: 150,
+    text: "Show HN: a local-first coding agent that runs on open-weight models",
+    entities: [],
+    corroborated: false,
+    likes: 412,
+    reposts: null,
+    replies: 138,
+  },
+  {
+    id: "hn-02",
+    accountSlug: "hackernews",
+    minutesAgo: 540,
+    text: "Discussion: benchmark contamination and what it means for model rankings",
+    entities: [],
+    corroborated: false,
+    likes: 268,
+    reposts: null,
+    replies: 97,
+  },
 ];
 
 /** Uncorroborated claim used to exercise the "not yet corroborated" UI state. */
@@ -296,6 +329,17 @@ const UNVERIFIED_SEED: PostSeed = {
   replies: 22,
 };
 
+function postIdFor(account: MonitoredAccount, seedId: string): string {
+  return account.platform === "hackernews" ? seedId : `${seedId}-bsky`;
+}
+
+function postUrlFor(account: MonitoredAccount, id: string): string {
+  const handle = account.handle.replace("@", "");
+  return account.platform === "hackernews"
+    ? `https://news.ycombinator.com/item?id=${id}`
+    : `https://bsky.app/profile/${handle}/post/${id}`;
+}
+
 export function buildFixtureSocialPosts(now: Date): SocialPost[] {
   const accounts = buildFixtureMonitoredAccounts();
   const bySlug = new Map(
@@ -307,14 +351,15 @@ export function buildFixtureSocialPosts(now: Date): SocialPost[] {
     .map((seed) => {
       const account = bySlug.get(seed.accountSlug);
       if (!account) throw new Error(`Unknown social account slug "${seed.accountSlug}"`);
+      const postId = postIdFor(account, seed.id);
       return {
         id: seed.id,
         accountId: account.id,
         handle: account.handle,
         displayName: account.displayName,
         platform: account.platform,
-        postId: `${seed.id}-x`,
-        url: `https://x.com/${account.handle.replace("@", "")}/status/${seed.id}`,
+        postId,
+        url: postUrlFor(account, postId),
         text: seed.text,
         publishedAt: new Date(now.getTime() - seed.minutesAgo * 60_000).toISOString(),
         metrics: { likes: seed.likes, reposts: seed.reposts, replies: seed.replies },

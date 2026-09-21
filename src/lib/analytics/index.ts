@@ -280,6 +280,18 @@ export const RANKING_BOARDS: RankingBoardDefinition[] = [
     description: "Weighted normalised capability per blended dollar.",
     emphasisesCostEfficiency: true,
   },
+  {
+    id: "hf_downloads",
+    title: "Most-downloaded open models",
+    metricKey: "hfDownloads",
+    description: "Hugging Face 30-day downloads. Popularity, not capability.",
+  },
+  {
+    id: "hf_likes",
+    title: "Most-liked open models",
+    metricKey: "hfLikes",
+    description: "Hugging Face likes. Popularity, not capability.",
+  },
 ];
 
 export interface RankingRow {

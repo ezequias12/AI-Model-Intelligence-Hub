@@ -18,6 +18,8 @@ const METRICS: ModelSnapshot["metrics"] = {
   cacheReadPricePerMillion: 0.1,
   cacheWritePricePerMillion: null,
   contextWindow: 128000,
+  hfDownloads: null,
+  hfLikes: null,
 };
 
 function snapshot(overrides: Partial<ModelSnapshot> = {}): ModelSnapshot {

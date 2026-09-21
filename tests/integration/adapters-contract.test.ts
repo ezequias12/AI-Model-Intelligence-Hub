@@ -4,10 +4,17 @@ import {
   mapArtificialAnalysisModel,
   toPersistenceRows,
 } from "@/lib/adapters/artificial-analysis";
-import { fetchSocialPosts, extractEntities, mapXPost } from "@/lib/adapters/social";
+import { fetchBlueskyPosts } from "@/lib/adapters/bluesky";
+import { fetchGdeltArticles } from "@/lib/adapters/gdelt";
+import { fetchHackerNewsPosts } from "@/lib/adapters/hackernews";
 import { fetchWorldNews, mapWorldWireItem } from "@/lib/adapters/world";
 import type { FetchLike } from "@/lib/adapters/types";
 import { HttpClient } from "@/lib/adapters/http";
+import { fetchHuggingFaceModels } from "@/lib/adapters/huggingface";
+import {
+  fetchOpenRouterModels,
+  toPersistenceRows as openRouterRows,
+} from "@/lib/adapters/openrouter";
 import { runJob } from "@/lib/ingestion/runner";
 import { JOBS } from "@/lib/jobs/registry";
 import { buildFixtureMonitoredAccounts } from "@/lib/fixtures/social";
@@ -30,7 +37,6 @@ beforeEach(() => {
   process.env = { ...ORIGINAL_ENV };
   process.env.NEXT_PUBLIC_DATA_MODE = "mock";
   delete process.env.ARTIFICIAL_ANALYSIS_API_KEY;
-  delete process.env.X_BEARER_TOKEN;
   delete process.env.WORLD_NEWS_API_KEY;
   delete process.env.WORLD_NEWS_BASE_URL;
   delete process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -274,19 +280,13 @@ describe("Artificial Analysis adapter", () => {
 });
 
 /* -------------------------------------------------------------------------- */
-/* Social contract                                                             */
+/* Community contract (Bluesky + Hacker News)                                  */
 /* -------------------------------------------------------------------------- */
 
-describe("social adapter", () => {
+describe("bluesky adapter", () => {
   const accounts = buildFixtureMonitoredAccounts();
 
-  it("returns not_configured without a bearer token", async () => {
-    const result = await fetchSocialPosts({ accounts });
-    expect(result.ok).toBe(false);
-    expect(result.error?.code).toBe("not_configured");
-  });
-
-  it("never scrapes HTML as a fallback", async () => {
+  it("issues no request when no Bluesky account is monitored", async () => {
     const calls: string[] = [];
     const spy: FetchLike = async (url) => {
       calls.push(url);
@@ -294,51 +294,114 @@ describe("social adapter", () => {
         ok: true,
         status: 200,
         headers: { get: () => null },
-        text: async () => "<html>tweet</html>",
-        json: async () => ({}),
+        text: async () => "{}",
+        json: async () => ({ feed: [] }),
       };
     };
 
-    await fetchSocialPosts({ accounts, fetchImpl: spy });
-    // Without a token the adapter must not issue any request at all.
+    await fetchBlueskyPosts({ accounts: [], fetchImpl: spy });
     expect(calls).toHaveLength(0);
   });
 
-  it("maps a post only when the account is monitored", () => {
-    const mapped = mapXPost(
-      { id: "1", text: "Hello @OpenAI #models", created_at: "2026-09-18T06:00:00.000Z" },
-      { username: "OpenAI", name: "OpenAI" },
-      { accounts, knownEntities: ["GPT-5.2"] },
-    );
+  it("maps an author-feed entry only when the account is monitored", async () => {
+    const payload = {
+      feed: [
+        {
+          post: {
+            uri: "at://did:plc:x/app.bsky.feed.post/abc123",
+            author: { handle: "openai.bsky.social", displayName: "OpenAI" },
+            record: { text: "GPT-5.2 is out", createdAt: "2026-09-18T06:00:00.000Z" },
+            indexedAt: "2026-09-18T06:00:01.000Z",
+            likeCount: 10,
+            repostCount: 2,
+            replyCount: 1,
+          },
+        },
+      ],
+    };
+    const fetchImpl: FetchLike = async (url) => {
+      const body = url.includes("openai.bsky.social") ? payload : { feed: [] };
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: () => null },
+        text: async () => JSON.stringify(body),
+        json: async () => body,
+      };
+    };
 
-    expect(mapped?.handle).toBe("@OpenAI");
-    expect(mapped?.entities).toContain("@OpenAI");
-    expect(mapped?.corroborated).toBe(false);
+    const result = await fetchBlueskyPosts({ accounts, fetchImpl });
+
+    expect(result.ok).toBe(true);
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({ platform: "bluesky", postId: "abc123" });
+    expect(result.items[0]?.url).toContain("bsky.app/profile/openai.bsky.social/post/abc123");
   });
 
-  it("drops a post whose author is not monitored", () => {
-    const mapped = mapXPost(
-      { id: "1", text: "Hello", created_at: "2026-09-18T06:00:00.000Z" },
-      { username: "random", name: "Random" },
-      { accounts, knownEntities: [] },
-    );
-    expect(mapped).toBeNull();
+  it("drops an entry from an account that is not monitored", async () => {
+    const payload = {
+      feed: [
+        {
+          post: {
+            uri: "at://did:plc:x/app.bsky.feed.post/zzz",
+            author: { handle: "random.bsky.social" },
+            record: { text: "hello", createdAt: "2026-09-18T06:00:00.000Z" },
+          },
+        },
+      ],
+    };
+    const result = await fetchBlueskyPosts({ accounts, fetchImpl: stubFetch(payload) });
+    expect(result.items).toHaveLength(0);
+  });
+});
+
+describe("hacker news adapter", () => {
+  const accounts = buildFixtureMonitoredAccounts();
+
+  it("issues no request when no Hacker News account is configured", async () => {
+    const calls: string[] = [];
+    const spy: FetchLike = async (url) => {
+      calls.push(url);
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: () => null },
+        text: async () => "{}",
+        json: async () => ({ hits: [] }),
+      };
+    };
+
+    await fetchHackerNewsPosts({ accounts: [], fetchImpl: spy });
+    expect(calls).toHaveLength(0);
   });
 
-  it("drops a post with no timestamp instead of inventing one", () => {
-    const mapped = mapXPost(
-      { id: "1", text: "Hello" },
-      { username: "OpenAI", name: "OpenAI" },
-      { accounts, knownEntities: [] },
-    );
-    expect(mapped).toBeNull();
+  it("maps points as likes and comments as replies, never a repost", async () => {
+    const payload = {
+      hits: [
+        {
+          objectID: "1",
+          title: "Show HN: local-first agent",
+          points: 412,
+          num_comments: 138,
+          created_at: "2026-09-18T06:00:00.000Z",
+        },
+      ],
+    };
+
+    const result = await fetchHackerNewsPosts({ accounts, fetchImpl: stubFetch(payload) });
+
+    expect(result.ok).toBe(true);
+    expect(result.items[0]).toMatchObject({
+      platform: "hackernews",
+      postId: "1",
+      metrics: { likes: 412, reposts: null, replies: 138 },
+    });
   });
 
-  it("extracts handles, hashtags and known entity names conservatively", () => {
-    const entities = extractEntities("GPT-5.2 is out. See @OpenAI and #benchmarks", ["GPT-5.2"]);
-    expect(entities).toContain("@OpenAI");
-    expect(entities).toContain("#benchmarks");
-    expect(entities).toContain("GPT-5.2");
+  it("fails loudly on an unexpected envelope", async () => {
+    const result = await fetchHackerNewsPosts({ accounts, fetchImpl: stubFetch({ nope: true }) });
+    expect(result.ok).toBe(false);
+    expect(result.error?.code).toBe("schema");
   });
 });
 
@@ -421,6 +484,106 @@ describe("world news adapter", () => {
 });
 
 /* -------------------------------------------------------------------------- */
+/* OpenRouter contract                                                         */
+/* -------------------------------------------------------------------------- */
+
+const OPENROUTER_PAYLOAD = {
+  data: [
+    {
+      id: "openai/gpt-4o",
+      name: "OpenAI: GPT-4o",
+      context_length: 128000,
+      pricing: { prompt: "0.0000025", completion: "0.00001" },
+    },
+    { id: "no-author-segment" },
+  ],
+};
+
+describe("openrouter adapter", () => {
+  it("maps the catalogue without a key and skips an unusable row", async () => {
+    const result = await fetchOpenRouterModels({
+      fetchImpl: stubFetch(OPENROUTER_PAYLOAD),
+      now: NOW,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.items).toHaveLength(1);
+    expect(result.skipped).toBe(1);
+
+    const rows = openRouterRows(result.items);
+    expect(rows.providers[0]?.id).toBe("provider:openai");
+    expect(rows.models[0]?.slug).toBe("gpt-4o");
+    expect(rows.models[0]?.metrics.contextWindow).toBe(128000);
+  });
+
+  it("fails loudly on an unexpected envelope", async () => {
+    const result = await fetchOpenRouterModels({
+      fetchImpl: stubFetch({ nope: true }),
+      now: NOW,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.error?.code).toBe("schema");
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Hugging Face contract                                                       */
+/* -------------------------------------------------------------------------- */
+
+const HF_PAYLOAD = [
+  { id: "meta-llama/Llama-3.1-8B", downloads: 12345, likes: 678 },
+  { id: "someone/unknown-model", downloads: 3, likes: 1 },
+];
+
+describe("hugging face adapter", () => {
+  it("reads popularity with no key", async () => {
+    const result = await fetchHuggingFaceModels({ fetchImpl: stubFetch(HF_PAYLOAD) });
+    expect(result.ok).toBe(true);
+    expect(result.items).toHaveLength(2);
+    expect(result.items[0]).toMatchObject({ slug: "llama-3-1-8b", downloads: 12345 });
+  });
+
+  it("fails loudly when the payload is not an array", async () => {
+    const result = await fetchHuggingFaceModels({ fetchImpl: stubFetch({ models: [] }) });
+    expect(result.ok).toBe(false);
+    expect(result.error?.code).toBe("schema");
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* GDELT contract                                                              */
+/* -------------------------------------------------------------------------- */
+
+describe("gdelt adapter", () => {
+  it("maps articles, canonicalizes urls and skips a row with no title", async () => {
+    const payload = {
+      articles: [
+        {
+          url: "https://example.com/a?utm_source=wire",
+          title: "AI news",
+          domain: "example.com",
+          seendate: "20260918T120000Z",
+        },
+        { url: "https://example.com/b" },
+      ],
+    };
+
+    const result = await fetchGdeltArticles({ query: "test", fetchImpl: stubFetch(payload) });
+
+    expect(result.ok).toBe(true);
+    expect(result.items).toHaveLength(1);
+    expect(result.skipped).toBe(1);
+    expect(result.items[0]?.canonicalUrl).toBe("https://example.com/a");
+  });
+
+  it("treats a response with no articles as a valid empty result", async () => {
+    const result = await fetchGdeltArticles({ query: "test", fetchImpl: stubFetch({}) });
+    expect(result.ok).toBe(true);
+    expect(result.items).toHaveLength(0);
+  });
+});
+
+/* -------------------------------------------------------------------------- */
 /* Job runner                                                                  */
 /* -------------------------------------------------------------------------- */
 
@@ -445,8 +608,8 @@ describe("job runner", () => {
   });
 
   it("marks a disabled source as disabled rather than failed", async () => {
-    const result = await runJob("sync-social", { now: NOW });
-    const outcome = result.outcomes.find((entry) => entry.sourceId === "x-monitored-accounts");
+    const result = await runJob("sync-world-news", { now: NOW });
+    const outcome = result.outcomes.find((entry) => entry.sourceId === "world-primary-wire");
     expect(outcome?.outcome).toBe("disabled");
     expect(outcome?.enabled).toBe(false);
   });

@@ -12,7 +12,6 @@ The first section is blocked on credentials or live pages; the rest is unblocked
 | B2 | Apply the migrations and generate Supabase types | Replace the hand-shaped client cast with generated types | `supabase/migrations/**`, `npm run db:gen-types`, `src/lib/data/supabase-repository.ts` |
 | B3 | Verify harness pricing selectors against the current pages | Either confirm `configVersion` `2026.09.1` or bump it and fix the patterns; add a captured fixture per page | `src/lib/ingestion/harness-configs.ts`, `tests/unit/adapters.test.ts` |
 | B4 | Create the QStash schedules and confirm signature verification end to end | One successful scheduled run per job recorded in `ingestion_runs` | `scripts/jobs/create-schedules.mjs`, `src/lib/jobs/verify.ts` |
-| B5 | Verify the X API v2 response shape and account lookup | Confirm the timeline request and mapping against a real authorized response | `src/lib/adapters/social.ts` |
 | B6 | Verify the world news provider envelope | Confirm `items` / `next_cursor` and the region and country-code fields | `src/lib/adapters/world.ts` |
 
 ## Unblocked, high value
@@ -38,6 +37,10 @@ The first section is blocked on credentials or live pages; the rest is unblocked
 | H8 | Add a CI workflow | `.github/workflows/ci.yml` (`quality` and `e2e` jobs) |
 | H9 | Add Playwright E2E specs | `tests/e2e/**` covering shell, models, news, harness, world/system and accessibility fundamentals |
 | H10 | Add automated accessibility auditing with axe (second half of H10) | `tests/e2e/axe.spec.ts`, `@axe-core/playwright` |
+| — | Model garden: OpenRouter breadth + context window, Hugging Face popularity, field-precedence merge | `src/lib/adapters/{openrouter,huggingface}.ts`, `src/lib/ingestion/merge-models.ts` (ADR-0009) |
+| — | Community Pulse: Bluesky + Hacker News replace X | `src/lib/adapters/{bluesky,hackernews,entities}.ts` (ADR-0009) |
+| — | News + World via GDELT (free, key-less) | `src/lib/adapters/gdelt.ts` (ADR-0009) |
+| KI-19 | Curated provider registry seeded; the merge preserves it | `supabase/migrations/20260918001200_seed_provider_registry.sql` |
 
 ## Unblocked, medium value
 

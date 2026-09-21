@@ -90,6 +90,13 @@ export const modelMetricsSchema = z.object({
   cacheWritePricePerMillion: usdSchema,
   /** Maximum context window in tokens. */
   contextWindow: metricSchema,
+  /**
+   * Hugging Face 30-day download count. A popularity signal from a specific
+   * platform, never a capability measure.
+   */
+  hfDownloads: metricSchema,
+  /** Hugging Face like count. Popularity, never capability. */
+  hfLikes: metricSchema,
 });
 export type ModelMetrics = z.infer<typeof modelMetricsSchema>;
 
@@ -105,6 +112,8 @@ export const MODEL_METRIC_KEYS = [
   "cacheReadPricePerMillion",
   "cacheWritePricePerMillion",
   "contextWindow",
+  "hfDownloads",
+  "hfLikes",
 ] as const;
 export type ModelMetricKey = (typeof MODEL_METRIC_KEYS)[number];
 
@@ -190,6 +199,11 @@ export const sourceTypeSchema = z.enum([
   "official_changelog",
   "github_releases",
   "social_api",
+  "openrouter_models",
+  "huggingface_models",
+  "bluesky",
+  "hackernews",
+  "gdelt",
   "manual",
 ]);
 export type SourceType = z.infer<typeof sourceTypeSchema>;
@@ -344,7 +358,7 @@ export const monitoredAccountSchema = z.object({
   id: z.string().min(1),
   handle: z.string().min(1),
   displayName: z.string().min(1),
-  platform: z.enum(["x", "linkedin", "youtube", "blog", "reddit"]),
+  platform: z.enum(["x", "bluesky", "hackernews", "linkedin", "youtube", "blog", "reddit"]),
   accountCategory: z.enum([
     "model_provider",
     "executive_researcher",
@@ -364,7 +378,7 @@ export const socialPostSchema = z.object({
   accountId: z.string().min(1),
   handle: z.string().min(1),
   displayName: z.string().min(1),
-  platform: z.enum(["x", "linkedin", "youtube", "blog", "reddit"]),
+  platform: z.enum(["x", "bluesky", "hackernews", "linkedin", "youtube", "blog", "reddit"]),
   postId: z.string().min(1),
   url: z.string().url(),
   /** Short excerpt consistent with platform terms. */

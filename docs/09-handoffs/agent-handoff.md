@@ -20,15 +20,16 @@ order, and what will mislead you.
 The application is complete as a product and fully usable without credentials, because mock mode is
 a first-class mode: every workspace renders from deterministic fixtures and the UI labels them.
 Domain logic, analytics, adapters, the repository layer, ingestion, migrations, CI and tests are all
-in place. **Artificial Analysis is now verified against the live API** (endpoint, field map and
-single-page behaviour reconciled), and the credential-free gaps are closed: harness products and plans
-are seeded, monitored social accounts are seeded, and the runner persists model and harness change
-events. Five capabilities remain `IMPLEMENTED - LIVE VERIFICATION PENDING CREDENTIALS`: Supabase
-persistence, QStash schedules and signature verification, X social ingestion and the world news
-provider. Accessibility is now audited with axe over fourteen routes. The main live-mode defect still
-open is that providers are not curated, so every live provider is `group: "other"` and the
-provider-group filters have nothing to match (KI-19). No result is claimed here; run `npm run check`
-and `npm run test:e2e`.
+in place. **Artificial Analysis is verified against the live API** (endpoint, field map and
+single-page behaviour reconciled). The community/news pivot (ADR-0009) moved Social Pulse off X to
+the free, key-less **Bluesky** and **Hacker News** APIs, added **GDELT** for news and world, and
+extended the model garden with **OpenRouter** (breadth + context window) and **Hugging Face**
+(popularity) behind a field-precedence merge. The harness catalogue, community accounts and curated
+provider registry are seeded, and the runner persists model and harness change events. Three
+capabilities remain `IMPLEMENTED - LIVE VERIFICATION PENDING CREDENTIALS`: Supabase persistence,
+QStash schedules and signature verification, and the licensed world news provider (GDELT is the
+enabled free alternative). Accessibility is audited with axe over fourteen routes. No result is
+claimed here; run `npm run check` and `npm run test:e2e`.
 
 ## What to do first
 
@@ -45,22 +46,22 @@ response. Do not re-verify it; extend it only if the vendor adds fields.
    anonymous write: it must fail.
 2. **Load live data.** `NEXT_PUBLIC_DATA_MODE=live npm run jobs:run sync-models` writes providers,
    models, snapshots and change events. Then `sync-harness-pricing` writes plan snapshots.
-3. **Curate providers (KI-19).** Live providers are all `group: "other"`. Seed the curated provider
-   registry and make `sync-models` preserve an existing curated group, region and colour.
+3. **Provider curation is seeded (KI-19 resolved).** Migration `0012` seeds the curated registry and
+   `mergeProviders` preserves its group, region and colour. Add more providers there as needed.
 4. **Create the QStash schedules** and confirm one accepted trigger per job, then that an unsigned
    POST is rejected with 401 in live mode.
-5. **Configure `X_BEARER_TOKEN`** and enable the `x-monitored-accounts` source; its accounts are
-   already seeded.
+5. **Community and news need no credential.** Bluesky, Hacker News and GDELT are enabled in the
+   registry; tune the GDELT queries in `src/lib/adapters/gdelt.ts` for the coverage you want.
 
 ### If you do not have credentials
 
-1. **Curate providers (KI-19).** This is the highest-leverage remaining item: without it the
-   provider-group filters are dead in live mode.
-2. **Add the HTML news-index adapter** (H3/KI-6) so `type: "html"` sources (for example
+1. **Add the HTML news-index adapter** (H3/KI-6) so `type: "html"` sources (for example
    `anthropic-news`) stop reporting `deferred`.
-3. **Populate `providerIds` and `entities` for ingested news** (H4/KI-4) and **derive news
+2. **Populate `providerIds` and `entities` for ingested news** (H4/KI-4) and **derive news
    categories from content** (H5/KI-5).
-4. **Implement raw payload capture and retention** (H6/H7).
+3. **Implement raw payload capture and retention** (H6/H7).
+4. **Tune the GDELT queries** and consider a second popularity signal if the Hugging Face one
+   proves too narrow.
 
 Do not start by adding features. The gaps above are about the product telling the truth about
 itself, which is the property this repository is built around.
@@ -73,7 +74,7 @@ itself, which is the property this repository is built around.
 | Never present mock data as live | The mode banner and `repository.meta` exist for this; degraded live mode must name the missing variables |
 | Never infer an undocumented vendor figure | Request allowances are only recorded when a vendor documents them |
 | Never infer provider grouping or region | ADR-0005; the adapter deliberately writes `other` and `null` |
-| Never scrape a source that publishes an API | ADR-0003, and never scrape X HTML |
+| Never scrape a source that publishes an API | ADR-0003 and ADR-0009; X is out of scope, and community/news/model-garden sources are public and key-less |
 | Never mix political content into scoring | ADR-0006; asserted by `tests/unit/world-neutrality.test.ts` |
 | Never put a secret in a `NEXT_PUBLIC_` variable | Values with that prefix are inlined into the client bundle |
 | Never claim an unrun result | Run `npm run check` and report what actually happened |
@@ -96,7 +97,9 @@ itself, which is the property this repository is built around.
 | `benchmark_definitions` and `model_benchmark_values` | Tables exist; no code reads or writes them |
 | `private.raw_ingestion_payloads` | Table and retention index exist; nothing writes to it and nothing deletes from it |
 | `previousSnapshot()` in fixtures and `signingKeysConfigured()` in verify | Dead exports |
-| Harness plans or social accounts missing on a fresh database | The seeds are migrations `0007` and `0008`. A database created before 2026-09-18 must apply them, or the pricing job writes no snapshots and the social job polls nothing |
+| Harness plans or social accounts missing on a fresh database | The seeds are migrations `0007` and `0008` (superseded for accounts by `0014`). A database created before 2026-09-18 must apply them, or the pricing job writes no snapshots and the social job polls nothing |
+| Hugging Face popularity read as capability | `hfDownloads`/`hfLikes` are platform popularity, labelled as such; never a quality signal |
+| Someone expects X back | X is out of scope (ADR-0009). Community signal is Bluesky + Hacker News; do not reintroduce `X_BEARER_TOKEN` or scraping |
 
 ## Documentation rules
 

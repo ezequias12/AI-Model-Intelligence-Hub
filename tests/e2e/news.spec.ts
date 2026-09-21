@@ -59,10 +59,10 @@ test.describe("news workspace", () => {
     }
   });
 
-  test("social pulse states that X HTML is never scraped", async ({ page }) => {
+  test("social pulse states that community HTML is never scraped", async ({ page }) => {
     await openApp(page, "/news/social");
 
-    await expect(page.getByText("Authorized APIs only")).toBeVisible();
+    await expect(page.getByText("Public APIs only")).toBeVisible();
     await expect(page.getByText(/never scraped/i)).toBeVisible();
     await expect(page.getByText(/deterministic fixture data/i)).toBeVisible();
   });

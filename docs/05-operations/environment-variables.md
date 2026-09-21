@@ -22,7 +22,11 @@ Do not commit real values. `.env.local` is git-ignored.
 | `QSTASH_NEXT_SIGNING_KEY` | Required for signature verification | `src/lib/jobs/verify.ts:17,22` | Yes | Same as above; both keys are required to construct the `Receiver`. |
 | `QSTASH_URL` | Optional | `NOT READ` | Yes (operationally) | Nothing. The Upstash client uses its default endpoint. |
 | `QSTASH_TARGET_BASE_URL` | Required to create schedules | `scripts/jobs/create-schedules.mjs:24` | Yes (not a secret, but deployment-specific) | The script exits with an error explaining that QStash needs a reachable base URL. Runtime is unaffected. |
-| `X_BEARER_TOKEN` | Required for social ingestion | `src/lib/adapters/social.ts:142`, capability report `src/lib/data/mode.ts:59` | Yes | `fetchSocialPosts` returns `not_configured` and issues zero requests. The `x-monitored-accounts` source is also disabled in the registry. |
+| `OPENROUTER_BASE_URL` | Optional (defaults to `https://openrouter.ai/api/v1`) | `src/lib/adapters/openrouter.ts` | Yes | Falls back to the production base URL. No credential is needed. |
+| `HUGGINGFACE_BASE_URL` | Optional (defaults to `https://huggingface.co/api`) | `src/lib/adapters/huggingface.ts` | Yes | Falls back to the production base URL. No credential is needed. |
+| `BLUESKY_BASE_URL` | Optional (defaults to the public AppView) | `src/lib/adapters/bluesky.ts` | No (public) | Falls back to `https://public.api.bsky.app/xrpc`. No credential is needed. |
+| `HACKERNEWS_BASE_URL` | Optional (defaults to `https://hn.algolia.com/api/v1`) | `src/lib/adapters/hackernews.ts` | No | Falls back to the Algolia endpoint. No credential is needed. |
+| `GDELT_BASE_URL` | Optional (defaults to `https://api.gdeltproject.org/api/v2/doc/doc`) | `src/lib/adapters/gdelt.ts` | No | Falls back to the GDELT endpoint. No credential is needed. |
 | `LLM_SUMMARY_API_KEY` | Optional, and currently unusable | Capability report only: `src/lib/data/mode.ts:71` | Yes | Nothing is summarised. No summariser client exists, so `NewsItem.summary` is always `null` and the UI uses the source excerpt. |
 | `LLM_SUMMARY_MODEL` | Optional | `NOT READ` | Yes | Nothing. |
 | `WORLD_NEWS_API_KEY` | Required for world news | `src/lib/adapters/world.ts:144`, capability report `src/lib/data/mode.ts:65` | Yes | `fetchWorldNews` returns `not_configured`; `sync-world-news` reports it; the World workspace shows fixtures. The `world-primary-wire` source is disabled in the registry. |
@@ -49,7 +53,7 @@ developer's `.env.local`.
 | Artificial Analysis | `ARTIFICIAL_ANALYSIS_API_KEY` | Yes |
 | Supabase | `NEXT_PUBLIC_SUPABASE_URL` **and** `SUPABASE_SERVICE_ROLE_KEY` | Yes |
 | QStash | `QSTASH_TOKEN` **and** `QSTASH_CURRENT_SIGNING_KEY` | Yes |
-| Social / X | `X_BEARER_TOKEN` | Yes |
+| Community (Bluesky + Hacker News) | none (public, key-less) | Yes (always `Configured`) |
 | World news | `WORLD_NEWS_API_KEY` | Yes |
 | LLM summaries | `LLM_SUMMARY_API_KEY` | Yes (but no client exists) |
 
@@ -75,10 +79,12 @@ QSTASH_CURRENT_SIGNING_KEY=<current-key>
 QSTASH_NEXT_SIGNING_KEY=<next-key>
 QSTASH_TOKEN=<token>                 # required only by the schedule script
 QSTASH_TARGET_BASE_URL=https://<deployment>   # required only by the schedule script
-X_BEARER_TOKEN=<token>               # optional: social
-WORLD_NEWS_API_KEY=<key>             # optional: world news
+WORLD_NEWS_API_KEY=<key>             # optional: licensed world news provider
 WORLD_NEWS_BASE_URL=https://<provider>  # optional, required together with the key
 ```
+
+The community (Bluesky, Hacker News), news (GDELT) and model-garden (OpenRouter, Hugging Face)
+sources need no credential and are enabled in the registry by default.
 
 ## Rules
 

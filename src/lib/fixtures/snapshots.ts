@@ -55,6 +55,10 @@ function metricsAt(model: Model, index: number, total: number): ModelMetrics {
     cacheReadPricePerMillion: project(base.cacheReadPricePerMillion, 0.1),
     cacheWritePricePerMillion: project(base.cacheWritePricePerMillion, 0.1),
     contextWindow: base.contextWindow,
+    // Popularity does not have meaningful history in the mock set; it is carried
+    // from the current value so snapshots stay structurally complete.
+    hfDownloads: base.hfDownloads,
+    hfLikes: base.hfLikes,
   };
 }
 

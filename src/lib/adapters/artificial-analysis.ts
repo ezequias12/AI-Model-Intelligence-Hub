@@ -186,6 +186,10 @@ export function mapArtificialAnalysisModel(
     cacheReadPricePerMillion: asNumber(pricing.price_1m_cache_hit_tokens),
     cacheWritePricePerMillion: asNumber(pricing.price_1m_cache_write_tokens),
     contextWindow: asNumber(raw.context_window),
+    // Popularity is not published by Artificial Analysis; it comes from the
+    // Hugging Face source (see merge-models.ts).
+    hfDownloads: null,
+    hfLikes: null,
   };
 
   return {

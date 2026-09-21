@@ -6,7 +6,7 @@ import { loadNewsWorkspace } from "@/lib/data/workspace";
 export const metadata: Metadata = {
   title: "News · Social Pulse",
   description:
-    "Monitored AI accounts ingested through authorized platform APIs only. X HTML is never scraped and full posts are never mirrored.",
+    "Community signals from public, key-less sources: Bluesky author feeds and Hacker News stories. Social HTML is never scraped and full posts are never mirrored.",
 };
 
 export default async function SocialPulsePage(): Promise<React.JSX.Element> {
@@ -19,11 +19,11 @@ export default async function SocialPulsePage(): Promise<React.JSX.Element> {
         className="rounded-panel border border-info/30 bg-info-muted px-3.5 py-2.5 text-xs"
         role="note"
       >
-        <p className="font-medium text-info">Authorized APIs only</p>
+        <p className="font-medium text-info">Public APIs only</p>
         <p className="mt-0.5 text-muted-foreground">
-          Social ingestion runs through authorized platform APIs. X (Twitter) HTML is never scraped,
-          and posts are shown as short excerpts consistent with platform terms rather than full
-          mirrors or embedded content.
+          Community ingestion reads public, key-less APIs (Bluesky and Hacker News). Social HTML is
+          never scraped, and posts are shown as short excerpts consistent with platform terms rather
+          than full mirrors or embedded content.
         </p>
         {mock && (
           <p className="mt-1 font-medium text-warning">

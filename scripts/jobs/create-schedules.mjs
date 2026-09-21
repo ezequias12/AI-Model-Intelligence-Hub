@@ -30,7 +30,7 @@ const JOBS = [
   {
     key: "sync-social",
     cron: "0 * * * *",
-    description: "Monitored social accounts via authorized API",
+    description: "Bluesky and Hacker News community signals",
   },
   {
     key: "sync-world-news",

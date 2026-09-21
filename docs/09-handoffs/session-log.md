@@ -3,6 +3,54 @@
 Append-only record of working sessions. Newest entries first. Each entry states what was done, what
 was verified (and how), and what was left open. Do not rewrite past entries.
 
+## 2026-09-18 - Community/news pivot: free sources, X removed (ADR-0009)
+
+**Scope:** drop X, move Social Pulse to free key-less APIs, add free news/world via GDELT, and extend
+the model garden with OpenRouter and Hugging Face. Out of scope: live calls to the new sources,
+applying the new migrations to Supabase, QStash.
+
+**What was done**
+
+1. **X removed.** `src/lib/adapters/social.ts` deleted; the `x-monitored-accounts` source, its
+   account seed and `X_BEARER_TOKEN` removed from the registry, seeds and env templates. The
+   `social_api` type survives only in the SQL CHECK for historical rows.
+2. **Community Pulse.** New `bluesky.ts` (public AppView `getAuthorFeed`, per monitored handle) and
+   `hackernews.ts` (Algolia; points → likes, comments → replies, reposts null); `entities.ts` holds
+   the shared entity extractor.
+3. **News + World.** New `gdelt.ts` producing `news_items` (ai_news) or `world_news_items`
+   (world_politics) by domain, key-less.
+4. **Model garden.** New `openrouter.ts` (breadth + context window) and `huggingface.ts`
+   (popularity); new `model-identity.ts` and `merge-models.ts` implement field-level source
+   precedence so a source never overwrites a non-null value with null.
+5. **Popularity metrics.** `hfDownloads`/`hfLikes` added to the domain, DB, mapper, writer and a new
+   `popularity` metric group; two ranking boards and a model-detail section.
+6. **KI-19 resolved.** Migration `0012` seeds the curated provider registry; `mergeProviders`
+   preserves it.
+7. **Migrations 0009-0015** widen the source-type and social-platform checks, add the popularity
+   columns, and seed the model-garden sources, provider registry, community sources/accounts and
+   GDELT sources.
+8. **Docs.** ADR-0009, the source catalog, status docs, testing strategy, environment variables,
+   changelog and this log.
+
+**Verified**
+
+- `npm run check` exits 0: format, lint, typecheck, **267 unit and integration tests**, 26-route
+  build.
+- `npm run test:e2e` passes **205 tests**, skips 5, both viewports, including the 28 axe cases.
+
+**Not done**
+
+- No live call to Bluesky, Hacker News, GDELT, OpenRouter or Hugging Face from this repository; all
+  are covered by contract tests with stubs.
+- Migrations 0009-0015 not applied to Supabase from here.
+- GDELT queries are first-guess keywords.
+
+**Open**
+
+- Popularity is one platform's attention, not quality (labelled as such).
+- Hugging Face slug matching is fuzzy; an unmatched model silently gets no popularity.
+- OpenRouter contributes no capability index and its routed price is unused.
+
 ## 2026-09-18 - Live-mode completion, Artificial Analysis verification and axe
 
 **Scope:** close the credential-free backlog (harness/social seeds, change-event persistence, quota-guard

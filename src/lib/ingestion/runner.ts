@@ -8,9 +8,21 @@
  */
 import { HttpClient, isDeferralError } from "@/lib/adapters/http";
 import { fetchArtificialAnalysis, toPersistenceRows } from "@/lib/adapters/artificial-analysis";
+import { fetchBlueskyPosts } from "@/lib/adapters/bluesky";
+import {
+  fetchGdeltArticles,
+  GDELT_QUERY_BY_SOURCE,
+  gdeltToNewsItem,
+  gdeltToWorldItem,
+} from "@/lib/adapters/gdelt";
+import { fetchHackerNewsPosts } from "@/lib/adapters/hackernews";
+import { applyPopularity, fetchHuggingFaceModels } from "@/lib/adapters/huggingface";
 import { extractHarnessPage } from "@/lib/adapters/harness-html";
+import {
+  fetchOpenRouterModels,
+  toPersistenceRows as openRouterRows,
+} from "@/lib/adapters/openrouter";
 import { feedToNewsItems } from "@/lib/adapters/rss";
-import { fetchSocialPosts } from "@/lib/adapters/social";
 import { fetchWorldNews } from "@/lib/adapters/world";
 import type { AdapterError, RateLimitState, FetchLike } from "@/lib/adapters/types";
 import { getRepository } from "@/lib/data";
@@ -23,6 +35,7 @@ import {
   latestSnapshotBy,
 } from "./change-events";
 import { HARNESS_CONFIG_BY_SOURCE } from "./harness-configs";
+import { mergeModelSources, mergeProviders } from "./merge-models";
 import { createIngestionWriter } from "./writer";
 import {
   emptyTotals,
@@ -194,16 +207,27 @@ async function runSource(
       }
 
       // Read the stored state before writing, so the diff compares against the
-      // previous snapshot rather than the one this run is about to insert.
+      // previous snapshot rather than the one this run is about to insert, and
+      // so a second source can never blank a first-party value (see
+      // merge-models.ts).
       const repository = await getRepository();
+      const [existingModels, existingProviders, storedSnapshots] = await Promise.all([
+        repository.getModels(),
+        repository.getProviders(),
+        repository.getModelSnapshots(),
+      ]);
       const previousByModel = latestSnapshotBy(
-        await repository.getModelSnapshots(),
+        storedSnapshots,
         (snapshot) => snapshot.modelId,
         (snapshot) => snapshot.capturedAt,
       );
 
-      const providerSummary = await writer.writeProviders(payload.providers);
-      const modelSummary = await writer.writeModels(payload.models);
+      const providerSummary = await writer.writeProviders(
+        mergeProviders(existingProviders, payload.providers),
+      );
+      const modelSummary = await writer.writeModels(
+        mergeModelSources(existingModels, payload.models),
+      );
       const snapshotSummary = await writer.writeModelSnapshots(payload.snapshots);
       const changeSummary = await writer.writeChangeEvents(
         buildModelChangeEvents(previousByModel, payload.snapshots),
@@ -244,6 +268,118 @@ async function runSource(
         itemsSkipped: result.skipped,
         rateLimitRemaining: result.rateLimit.remaining,
         message: `Mapped ${result.items.length} models from Artificial Analysis (${changeSummary.written} change events).`,
+      });
+    }
+
+    /* --------------------------- OpenRouter models -------------------------- */
+    if (source.type === "openrouter_models") {
+      const result = await fetchOpenRouterModels({ fetchImpl, now });
+      if (!result.ok) {
+        return await adapterFailureOutcome(
+          writer,
+          source.id,
+          "sync-models",
+          now,
+          base,
+          result.error,
+          result.rateLimit,
+          "OpenRouter adapter failed.",
+        );
+      }
+
+      const payload = openRouterRows(result.items);
+      if (!writer.enabled) {
+        return deferred(
+          {
+            ...base,
+            itemsSeen: result.items.length,
+            rateLimitRemaining: result.rateLimit.remaining,
+          },
+          "OpenRouter responded, but Supabase is not configured so nothing was persisted.",
+        );
+      }
+
+      const repository = await getRepository();
+      const [existingModels, existingProviders] = await Promise.all([
+        repository.getModels(),
+        repository.getProviders(),
+      ]);
+
+      const providerSummary = await writer.writeProviders(
+        mergeProviders(existingProviders, payload.providers),
+      );
+      const modelSummary = await writer.writeModels(
+        mergeModelSources(existingModels, payload.models),
+      );
+
+      await recordRun(writer, source.id, "sync-models", now, {
+        itemsSeen: result.items.length,
+        itemsWritten: modelSummary.written,
+        itemsSkipped: result.skipped,
+        rateLimitRemaining: result.rateLimit.remaining,
+        rateLimitResetAt: result.rateLimit.resetAt,
+        error: modelSummary.errors[0] ?? providerSummary.errors[0] ?? null,
+      });
+
+      return ok({
+        ...base,
+        itemsSeen: result.items.length,
+        itemsWritten: modelSummary.written,
+        itemsSkipped: result.skipped,
+        rateLimitRemaining: result.rateLimit.remaining,
+        message: `Mapped ${result.items.length} OpenRouter catalogue entries (context window and breadth only).`,
+      });
+    }
+
+    /* ------------------------- Hugging Face popularity ---------------------- */
+    if (source.type === "huggingface_models") {
+      const result = await fetchHuggingFaceModels({ fetchImpl });
+      if (!result.ok) {
+        return await adapterFailureOutcome(
+          writer,
+          source.id,
+          "sync-models",
+          now,
+          base,
+          result.error,
+          result.rateLimit,
+          "Hugging Face adapter failed.",
+        );
+      }
+
+      if (!writer.enabled) {
+        return deferred(
+          {
+            ...base,
+            itemsSeen: result.items.length,
+            rateLimitRemaining: result.rateLimit.remaining,
+          },
+          "Hugging Face responded, but Supabase is not configured so nothing was persisted.",
+        );
+      }
+
+      const repository = await getRepository();
+      const existing = await repository.getModels();
+      const matched = applyPopularity(existing, result.items);
+
+      const summary = await writer.writeModels(matched.models);
+
+      await recordRun(writer, source.id, "sync-models", now, {
+        itemsSeen: result.items.length,
+        itemsWritten: summary.written,
+        itemsSkipped: matched.unmatched,
+        rateLimitRemaining: result.rateLimit.remaining,
+        rateLimitResetAt: result.rateLimit.resetAt,
+        error: summary.errors[0] ?? null,
+      });
+
+      return ok({
+        ...base,
+        itemsSeen: result.items.length,
+        itemsWritten: summary.written,
+        itemsSkipped: matched.unmatched,
+        rateLimitRemaining: result.rateLimit.remaining,
+        message: `Matched popularity for ${matched.matched} of ${result.items.length} Hugging Face models.`,
       });
     }
 
@@ -393,11 +529,15 @@ async function runSource(
       });
     }
 
-    /* --------------------------------- Social ------------------------------ */
-    if (source.type === "social_api") {
+    /* --------------------------- Community signals -------------------------- */
+    if (source.type === "bluesky" || source.type === "hackernews") {
       const repository = await getRepository();
       const accounts = await repository.getMonitoredAccounts();
-      const result = await fetchSocialPosts({ accounts, fetchImpl });
+      const isBluesky = source.type === "bluesky";
+      const result = isBluesky
+        ? await fetchBlueskyPosts({ accounts, fetchImpl })
+        : await fetchHackerNewsPosts({ accounts, fetchImpl });
+      const label = isBluesky ? "Bluesky" : "Hacker News";
 
       if (!result.ok) {
         return await adapterFailureOutcome(
@@ -408,14 +548,14 @@ async function runSource(
           base,
           result.error,
           result.rateLimit,
-          "Social adapter failed.",
+          `${label} adapter failed.`,
         );
       }
 
       if (!writer.enabled) {
         return deferred(
           { ...base, itemsSeen: result.items.length },
-          "Authorized social API responded, but Supabase is not configured so nothing was persisted.",
+          `${label} responded, but Supabase is not configured so nothing was persisted.`,
         );
       }
 
@@ -435,8 +575,77 @@ async function runSource(
         ...base,
         itemsSeen: result.items.length,
         itemsWritten: postSummary.written,
+        itemsSkipped: result.skipped,
         rateLimitRemaining: result.rateLimit.remaining,
-        message: `Ingested ${result.items.length} posts from authorized API.`,
+        message: `Ingested ${result.items.length} ${label} items.`,
+      });
+    }
+
+    /* -------------------------------- GDELT --------------------------------- */
+    if (source.type === "gdelt") {
+      const query = GDELT_QUERY_BY_SOURCE[source.id] ?? '"artificial intelligence"';
+      const result = await fetchGdeltArticles({ query, fetchImpl });
+
+      if (!result.ok) {
+        return await adapterFailureOutcome(
+          writer,
+          source.id,
+          jobKeyForDomain(source.domain),
+          now,
+          base,
+          result.error,
+          result.rateLimit,
+          "GDELT adapter failed.",
+        );
+      }
+
+      if (!writer.enabled) {
+        return deferred(
+          { ...base, itemsSeen: result.items.length },
+          "GDELT responded, but Supabase is not configured so nothing was persisted.",
+        );
+      }
+
+      const isWorld = source.domain === "world_politics";
+      const trustTier = source.priority === 1 ? 1 : 2;
+      const summary = isWorld
+        ? await writer.writeWorldNews(
+            result.items.map((article) =>
+              gdeltToWorldItem(article, {
+                sourceId: source.id,
+                sourceName: source.name,
+                trustTier,
+                now,
+              }),
+            ),
+          )
+        : await writer.writeNewsItems(
+            result.items.map((article) =>
+              gdeltToNewsItem(article, {
+                sourceId: source.id,
+                sourceName: source.name,
+                trustTier,
+                now,
+              }),
+            ),
+          );
+
+      await recordRun(writer, source.id, isWorld ? "sync-world-news" : "sync-ai-news", now, {
+        itemsSeen: result.items.length,
+        itemsWritten: summary.written,
+        itemsSkipped: result.skipped,
+        rateLimitRemaining: result.rateLimit.remaining,
+        rateLimitResetAt: result.rateLimit.resetAt,
+        error: summary.errors[0] ?? null,
+      });
+
+      return ok({
+        ...base,
+        itemsSeen: result.items.length,
+        itemsWritten: summary.written,
+        itemsSkipped: result.skipped,
+        rateLimitRemaining: result.rateLimit.remaining,
+        message: `Ingested ${result.items.length} GDELT articles.`,
       });
     }
 

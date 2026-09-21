@@ -31,13 +31,18 @@ placeholders.
 | `huggingface-blog` | research | rss | 2 | 120 | https://huggingface.co/blog/feed.xml | Hugging Face |
 | `arxiv-cs-ai` | research | atom | 2 | 360 | https://export.arxiv.org/rss/cs.AI | arXiv |
 | `artificial-analysis-posts` | research | html | 2 | 720 | https://artificialanalysis.ai/methodology | Artificial Analysis |
+| `openrouter-models` | models | openrouter_models | 2 | 240 | https://openrouter.ai/api/v1/models | OpenRouter |
+| `huggingface-models` | models | huggingface_models | 2 | 240 | https://huggingface.co/api/models | Hugging Face |
+| `bluesky-accounts` | social | bluesky | 2 | 60 | https://public.api.bsky.app/xrpc/app.bsky.feed.getAuthorFeed | Bluesky |
+| `hackernews-stories` | social | hackernews | 3 | 60 | https://hn.algolia.com/api/v1/search_by_date | Hacker News (Algolia) |
+| `gdelt-ai-news` | ai_news | gdelt | 2 | 60 | https://api.gdeltproject.org/api/v2/doc/doc | GDELT Project |
+| `gdelt-world-news` | world_politics | gdelt | 1 | 30 | https://api.gdeltproject.org/api/v2/doc/doc | GDELT Project |
 
 ## Disabled sources
 
 | ID | Domain | Type | Priority | Cadence (min) | URL | Why disabled |
 | --- | --- | --- | --- | --- | --- | --- |
-| `x-monitored-accounts` | social | social_api | 2 | 60 | https://developer.x.com/en/docs/x-api | Requires authorized API access. Disabled until `X_BEARER_TOKEN` is configured. X HTML is never scraped as the foundation. |
-| `world-primary-wire` | world_politics | json | 1 | 30 | https://example.com/world-wire-api | Requires a licensed provider. Disabled until `WORLD_NEWS_API_KEY` and `WORLD_NEWS_BASE_URL` are configured. The URL is a placeholder. |
+| `world-primary-wire` | world_politics | json | 1 | 30 | https://example.com/world-wire-api | Requires a licensed provider. Disabled until `WORLD_NEWS_API_KEY` and `WORLD_NEWS_BASE_URL` are configured. The URL is a placeholder. `gdelt-world-news` is the enabled free alternative. |
 
 ## Which sources each job consumes
 
@@ -62,7 +67,12 @@ a registry entry only. It exists so provider-provenance attribution has a named 
 | `rss`, `atom` | `feedToNewsItems` | Dependency-free RSS 2.0 / Atom parser |
 | `official_pricing`, `official_site` | `extractHarnessPage` with a registered config | Requires a config in `src/lib/ingestion/harness-configs.ts`, otherwise the source fails with an explanatory message |
 | `github_releases` | `feedToNewsItems` against `<url>.atom` | The `.atom` suffix is appended if absent |
-| `social_api` | `fetchSocialPosts` | Bearer token; zero requests without it |
+| `social_api` | No adapter | Retired with X (ADR-0009); the value stays in the SQL CHECK only for historical rows |
+| `bluesky` | `fetchBlueskyPosts` | Public AppView, key-less; issues no request when no Bluesky account is monitored |
+| `hackernews` | `fetchHackerNewsPosts` | Algolia, key-less; points → likes, comments → replies, reposts always null |
+| `gdelt` | `fetchGdeltArticles` | Key-less; produces `news_items` (ai_news) or `world_news_items` (world_politics) by domain |
+| `openrouter_models` | `fetchOpenRouterModels` + merge | Key-less; catalogue breadth and context window only |
+| `huggingface_models` | `fetchHuggingFaceModels` + merge | Key-less; popularity only, enriches matched models |
 | `json` | `fetchWorldNews` when the domain is `world_politics` | Cursor pagination |
 | `html` (news) | No adapter | Reported as `deferred`; see KI-6 in `docs/03-implementation/current/known-issues.md` |
 | `official_docs`, `official_changelog`, `manual` | No direct adapter | `official_docs` harness entries are not fetched (the pricing-page config covers pricing); `openai-release-notes` is `official_changelog` with no adapter |

@@ -11,13 +11,14 @@ import type { Model, ModelMetrics, Provider } from "@/lib/domain/schema";
 import { blendedPrice, valueScore, type BetterDirection } from "@/lib/domain/metrics";
 import {
   formatContextWindow,
+  formatNumber,
   formatScore,
   formatSpeed,
   formatTtft,
   formatUnitPrice,
 } from "@/lib/format";
 
-export type MetricGroup = "capability" | "performance" | "cost" | "derived";
+export type MetricGroup = "capability" | "performance" | "cost" | "derived" | "popularity";
 
 export interface ModelContext {
   model: Model;
@@ -55,6 +56,7 @@ const fmtRatio = (value: number | null): string =>
     : value >= 100
       ? Math.round(value).toString()
       : value.toFixed(2);
+const fmtCount = (value: number | null): string => formatNumber(value);
 
 export const METRICS: MetricDefinition[] = [
   {
@@ -249,6 +251,31 @@ export const METRICS: MetricDefinition[] = [
       null,
     format: fmtRatio,
   },
+  {
+    key: "hfDownloads",
+    label: "Hugging Face downloads (30d)",
+    shortLabel: "HF dl",
+    group: "popularity",
+    direction: "higher",
+    provenance: "measured",
+    unit: "downloads",
+    description:
+      "Hugging Face 30-day download count. A popularity signal from one platform, never a capability measure.",
+    get: (context) => context.model.metrics.hfDownloads,
+    format: fmtCount,
+  },
+  {
+    key: "hfLikes",
+    label: "Hugging Face likes",
+    shortLabel: "HF likes",
+    group: "popularity",
+    direction: "higher",
+    provenance: "measured",
+    unit: "likes",
+    description: "Hugging Face like count. Popularity, never capability.",
+    get: (context) => context.model.metrics.hfLikes,
+    format: fmtCount,
+  },
 ];
 
 export const METRIC_BY_KEY = new Map(METRICS.map((metric) => [metric.key, metric]));
@@ -293,6 +320,8 @@ export const DEFAULT_TABLE_METRIC_KEYS = [
   "outputSpeedTps",
   "ttftSeconds",
   "contextWindow",
+  "hfDownloads",
+  "hfLikes",
 ] as const;
 
 export function buildModelContexts(

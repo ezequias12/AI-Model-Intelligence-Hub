@@ -139,9 +139,14 @@ therefore attaches no snapshots.
 
 Files: `src/lib/ingestion/{runner,writer}.ts`.
 
-### KI-19 - Live providers lose the curated grouping
+### KI-19 - Live providers lose the curated grouping (resolved)
 
-Severity: medium in live mode.
+Severity: medium in live mode (resolved 2026-09-18).
+
+Resolved: `supabase/migrations/20260918001200_seed_provider_registry.sql` seeds the curated
+providers, and `mergeProviders` in `src/lib/ingestion/merge-models.ts` preserves an existing
+group, region and colour, so `sync-models`' deliberate `group: "other"` no longer clobbers
+curation.
 
 `sync-models` writes each provider with `group: "other"`, `region: null`, `countryCode: null` and
 `color: null`, because provider grouping is never inferred from the metric payload (ADR-0005). The

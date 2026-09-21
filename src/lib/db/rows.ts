@@ -55,6 +55,8 @@ export const modelRowSchema = z.object({
   cache_read_price_per_million: nullableNumber,
   cache_write_price_per_million: nullableNumber,
   context_window: nullableNumber,
+  hf_downloads: nullableNumber,
+  hf_likes: nullableNumber,
 });
 export type ModelRow = z.infer<typeof modelRowSchema>;
 

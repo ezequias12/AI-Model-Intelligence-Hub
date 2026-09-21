@@ -81,6 +81,8 @@ export function toModel(row: ModelRow): Model {
       cacheReadPricePerMillion: row.cache_read_price_per_million,
       cacheWritePricePerMillion: row.cache_write_price_per_million,
       contextWindow: row.context_window,
+      hfDownloads: row.hf_downloads,
+      hfLikes: row.hf_likes,
     },
     sourceId: row.source_id,
     sourceVersion: row.source_version,
@@ -106,6 +108,8 @@ export function toModelSnapshot(row: ModelSnapshotRow): ModelSnapshot {
         cacheReadPricePerMillion: null,
         cacheWritePricePerMillion: null,
         contextWindow: null,
+        hfDownloads: null,
+        hfLikes: null,
       });
 
   return {

@@ -19,7 +19,9 @@ recorded, not hidden: each item states the cost of leaving it and the cost of fi
 | Hand-shaped client interface cast in the Supabase repository | Same cause: no generated types | Loses compile-time query checking; a column rename is not caught by `tsc` | Same as above |
 | Row validation logs and skips an invalid row | Keeps one bad row from blanking a page | Failure is a console line, not a metric; a persistent validation failure can go unnoticed | Count and expose validation failures per table in the Sources workspace |
 | Duplicate sources of current state (`models` plus the newest snapshot) | Snapshots are append-only history, the current table is a fast read path | The two can diverge if the snapshot write succeeds and the model write fails; the run is marked `partial` or `failed` but reconciliation is manual | Add a reconciliation query or write current state from the newest snapshot in a single transaction |
-| Live providers are not curated (KI-19) | The adapter cannot infer grouping (ADR-0005) and the curated registry lives only in the mock fixtures | The Models provider-group filters (Mainstream / China-based) have nothing to match in live mode; every provider renders as `Other` | Seed the curated provider registry into `public.providers` and make `sync-models` preserve an existing group, region and colour instead of overwriting them |
+| Live providers are not curated (KI-19, resolved 2026-09-18) | — | — | The curated registry is seeded (migration 0012) and `mergeProviders` preserves it |
+| Popularity metrics come from one platform | Hugging Face is the only key-less source with downloads and likes | Trending on the Hub is not adoption or quality, and a model with no Hub page shows an em dash | Keep it labelled as popularity; consider a second independent popularity signal later |
+| OpenRouter contributes no capability and its routed price is unused | It publishes neither an index nor a first-party price | Its catalogue entries can carry a price with no capability, and its routed price is silently ignored | Surface a clearly labelled routed-price metric only if it proves useful |
 
 ## Ingestion
 

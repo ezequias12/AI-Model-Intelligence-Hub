@@ -176,6 +176,8 @@ export function createIngestionWriter(): IngestionWriter {
           cache_read_price_per_million: row.metrics.cacheReadPricePerMillion,
           cache_write_price_per_million: row.metrics.cacheWritePricePerMillion,
           context_window: row.metrics.contextWindow,
+          hf_downloads: row.metrics.hfDownloads,
+          hf_likes: row.metrics.hfLikes,
         })),
       );
     },

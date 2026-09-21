@@ -12,6 +12,8 @@ import { EmptyState } from "./feed";
 
 const PLATFORM_LABELS: Record<SocialPost["platform"], string> = {
   x: "X",
+  bluesky: "Bluesky",
+  hackernews: "Hacker News",
   linkedin: "LinkedIn",
   youtube: "YouTube",
   blog: "Blog",

@@ -195,7 +195,7 @@ export const WORKSPACES: WorkspaceDefinition[] = [
       {
         href: "/news/social",
         label: "Social Pulse",
-        description: "Monitored accounts via authorized APIs.",
+        description: "Bluesky and Hacker News community signals.",
       },
       {
         href: "/news/research",

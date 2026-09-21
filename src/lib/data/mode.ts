@@ -56,10 +56,10 @@ export function describeCapabilities(): DataSourceMeta["capabilities"] {
       note: "Scheduled ingestion with signature verification.",
     },
     {
-      key: "social",
-      label: "X / social API",
-      configured: Boolean(process.env.X_BEARER_TOKEN),
-      note: "Authorized API only. X HTML is never scraped as the foundation.",
+      key: "community",
+      label: "Bluesky + Hacker News",
+      configured: true,
+      note: "Public, key-less APIs. Community signal only; nothing is scraped.",
     },
     {
       key: "world_news",

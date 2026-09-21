@@ -27,6 +27,8 @@ function metrics(input: Partial<ModelMetrics>): ModelMetrics {
     cacheReadPricePerMillion: null,
     cacheWritePricePerMillion: null,
     contextWindow: null,
+    hfDownloads: null,
+    hfLikes: null,
     ...input,
   };
 }

@@ -6,6 +6,7 @@
  * scoring and change detection. They are NOT live Artificial Analysis values.
  */
 import type { Model, ModelMetrics, Provider } from "@/lib/domain/schema";
+import { stableHash } from "@/lib/domain/hash";
 import type { FixtureProviderSeed } from "./providers";
 
 interface ModelSeed {
@@ -33,6 +34,8 @@ function metrics(input: Partial<ModelMetrics>): ModelMetrics {
     cacheReadPricePerMillion: null,
     cacheWritePricePerMillion: null,
     contextWindow: null,
+    hfDownloads: null,
+    hfLikes: null,
     ...input,
   };
 }
@@ -700,6 +703,19 @@ function daysBefore(now: Date, days: number): string {
   return new Date(now.getTime() - days * 86_400_000).toISOString();
 }
 
+/**
+ * Deterministic mock popularity for open-weight models, so the popularity boards
+ * have data in mock mode. Closed models stay `null` (no Hub page).
+ */
+function withPopularity(slug: string, metrics: ModelMetrics): ModelMetrics {
+  const seed = Number.parseInt(stableHash(`${slug}:hf`).slice(0, 8), 16);
+  return {
+    ...metrics,
+    hfDownloads: 25_000 + (seed % 4_000_000),
+    hfLikes: 40 + (seed % 2_500),
+  };
+}
+
 export function buildFixtureModels(
   providers: Provider[],
   providerSeeds: FixtureProviderSeed[],
@@ -728,7 +744,7 @@ export function buildFixtureModels(
       openWeight: seed.openWeight,
       description: `${seed.name} — fixture entry for the Model Intelligence Hub comparison workspace.`,
       officialUrl: null,
-      metrics: seed.metrics,
+      metrics: seed.openWeight ? withPopularity(seed.slug, seed.metrics) : seed.metrics,
       sourceId: "artificial-analysis-api",
       sourceVersion: "fixture-2026.09",
       lastRefreshedAt: refreshedAt,

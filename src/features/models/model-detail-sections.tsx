@@ -92,11 +92,32 @@ export function ModelMetricsSection({
 }): React.JSX.Element {
   const capability = METRICS.filter((metric) => metric.group === "capability");
   const performance = METRICS.filter((metric) => metric.group === "performance");
+  const popularity = METRICS.filter((metric) => metric.group === "popularity");
+  // A closed model has no Hub page, so the section is hidden rather than shown
+  // full of em dashes.
+  const hasPopularity = popularity.some(
+    (metric) =>
+      metric.get({
+        model,
+        provider: undefined,
+        blendedPrice: null,
+        previous,
+        population: [model.metrics],
+      }) !== null,
+  );
 
   return (
     <section className="flex flex-col gap-3">
       <MetricGroup title="Capability" metrics={capability} model={model} previous={previous} />
       <MetricGroup title="Performance" metrics={performance} model={model} previous={previous} />
+      {hasPopularity && (
+        <MetricGroup
+          title="Popularity (not capability)"
+          metrics={popularity}
+          model={model}
+          previous={previous}
+        />
+      )}
     </section>
   );
 }

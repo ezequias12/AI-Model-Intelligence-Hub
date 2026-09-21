@@ -76,6 +76,7 @@ sample is claimed here.
 | Harness product / plan catalogue seed | `IMPLEMENTED` | `supabase/migrations/20260918000700_seed_harness_catalog.sql` |
 | Monitored social account seed | `IMPLEMENTED` | `supabase/migrations/20260918000800_seed_monitored_social_accounts.sql` |
 | Change-event persistence from diffs | `IMPLEMENTED` | `src/lib/ingestion/change-events.ts`; the runner writes model and harness change events after each sync |
+| Multi-source model merge (field precedence) | `IMPLEMENTED` | `src/lib/ingestion/merge-models.ts`; applied before every model write in the runner |
 | Raw payload capture | `NOT IMPLEMENTED` | Nothing writes to `private.raw_ingestion_payloads` |
 | Raw payload retention cleanup | `NOT IMPLEMENTED` | `runMaintenance()` returns a message and deletes nothing |
 | Distributed locking between concurrent runs | `NOT IMPLEMENTED` | Idempotency is key-based only |
@@ -89,7 +90,14 @@ sample is claimed here.
 | Artificial Analysis Data API | `IMPLEMENTED - LIVE-VERIFIED 2026-09-18 (persistence pending)` (`ARTIFICIAL_ANALYSIS_API_KEY`) | `src/lib/adapters/artificial-analysis.ts` |
 | RSS 2.0 and Atom parser | `IMPLEMENTED` | `src/lib/adapters/rss.ts` |
 | Harness pricing-page extractor | `IMPLEMENTED - LIVE VERIFICATION PENDING CREDENTIALS` (selectors unverified against live pages) | `src/lib/adapters/harness-html.ts`, `src/lib/ingestion/harness-configs.ts` |
-| Social / X API contract | `IMPLEMENTED - LIVE VERIFICATION PENDING CREDENTIALS` (`X_BEARER_TOKEN`) | `src/lib/adapters/social.ts` |
+| Social / X API contract | `REMOVED` | X is out of scope (ADR-0009); `src/lib/adapters/social.ts` was deleted |
+| Community: Bluesky | `IMPLEMENTED` | `src/lib/adapters/bluesky.ts`; public AppView, key-less |
+| Community: Hacker News | `IMPLEMENTED` | `src/lib/adapters/hackernews.ts`; Algolia, key-less |
+| News + World: GDELT | `IMPLEMENTED` | `src/lib/adapters/gdelt.ts` |
+| Model garden: OpenRouter | `IMPLEMENTED` | `src/lib/adapters/openrouter.ts`; breadth and context window only |
+| Model garden: Hugging Face popularity | `IMPLEMENTED` | `src/lib/adapters/huggingface.ts` |
+| Shared model identity | `IMPLEMENTED` | `src/lib/adapters/model-identity.ts`; slug normalisation |
+| Shared entity extraction | `IMPLEMENTED` | `src/lib/adapters/entities.ts` |
 | World news provider | `IMPLEMENTED - LIVE VERIFICATION PENDING CREDENTIALS` (`WORLD_NEWS_API_KEY`, `WORLD_NEWS_BASE_URL`) | `src/lib/adapters/world.ts` |
 | Text and hashing helpers | `IMPLEMENTED` | `src/lib/adapters/text-utils.ts` |
 | Dedicated HTML-news-index adapter (for `type: "html"` news sources) | `NOT IMPLEMENTED` | No adapter is registered for `html` news sources; they are reported as `deferred` |

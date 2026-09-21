@@ -39,6 +39,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   symbols on the landscape charts (the plot is now decorative; the data table is the accessible
   equivalent).
 
+### Changed (community and news pivot, ADR-0009)
+
+- **X is out of scope.** The X adapter, its source row, its account seed and `X_BEARER_TOKEN` are
+  removed. Nothing scrapes a source that publishes an API.
+- **Community Pulse** is served by the public, key-less **Bluesky** AppView and **Hacker News**
+  Algolia API. A Hacker News story maps points to likes, comments to replies, reposts to null.
+- **News and World** are served by **GDELT DOC 2.0**, key-less, feeding `news_items` and
+  `world_news_items`.
+- **Model garden**: **OpenRouter** adds catalogue breadth and the context window; the **Hugging
+  Face Hub** adds popularity (`hfDownloads`, `hfLikes`), with two new "most-downloaded" and
+  "most-liked" ranking boards and a Popularity section on the model detail page.
+- **Multi-source model merge** with field-level precedence: a source never overwrites a non-null
+  value with null, so Artificial Analysis capability and first-party price always win; Hugging Face
+  only enriches matched models and never inserts one; OpenRouter's routed price is not used.
+- A curated provider registry is seeded and the merge preserves it, resolving KI-19.
+
 ## [0.1.0] - 2026-09-18
 
 Initial implementation of AI Model Intelligence Hub.

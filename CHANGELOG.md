@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `QuickSyncButton` (`src/components/shell/quick-sync.tsx`), mounted in the app shell header: runs
+  the core pipeline (`job: "all"`) through `/api/jobs/manual` from any page, shares the stored
+  `amih_admin_key` token with the Sources panel, opens the token popover on 401 and calls
+  `router.refresh()` on success.
+
 - Artificial Analysis adapter verified against the live API: endpoint corrected to
   `/data/llms/models`, capability metrics mapped from `evaluations.artificial_analysis_*`,
   single-page handling for the free endpoint (which returns everything without a pagination
@@ -33,6 +38,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Prettier `endOfLine` is now `auto`, so the format check passes on a CRLF Windows checkout.
 
 ### Fixed
+
+- `/api/jobs/manual` and `/api/cron` now declare `maxDuration = 300`: a full four-job pass measured
+  ~83s, so the previous 60s ceiling truncated the pipeline mid-run.
+- Production `NEXT_PUBLIC_SUPABASE_URL` had been set to the Supabase dashboard URL instead of the
+  project API URL, so every select received HTML and the UI rendered em dashes under a green "Live"
+  banner. Corrected in the Vercel project environment.
 
 - Accessibility defects surfaced by the axe audit: an `<hr>` directly inside the Sources capability
   `<ul>`, scrollable Methodology tables without keyboard access, and unlabelled Recharts scatter

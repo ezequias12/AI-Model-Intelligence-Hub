@@ -8,7 +8,9 @@ import { NextResponse } from "next/server";
 import { runJob } from "@/lib/ingestion/runner";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+// Four jobs run sequentially here too; keep the same ceiling as the job route
+// so the daily run is not truncated mid-pipeline.
+export const maxDuration = 300;
 
 export async function GET(request: Request): Promise<NextResponse> {
   const cronSecret = process.env.CRON_SECRET;

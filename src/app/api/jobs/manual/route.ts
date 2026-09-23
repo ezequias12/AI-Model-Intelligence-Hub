@@ -9,7 +9,9 @@ import { runJob } from "@/lib/ingestion/runner";
 import { isJobKey, JOBS, type JobKey } from "@/lib/jobs/registry";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+// The "all" case runs four jobs sequentially; a full pass measured ~83s, so
+// the 60s default would cut the run short on a plan with that ceiling.
+export const maxDuration = 300;
 
 export async function POST(request: Request): Promise<NextResponse> {
   const authHeader = request.headers.get("authorization");

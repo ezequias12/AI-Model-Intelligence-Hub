@@ -3,6 +3,44 @@
 Append-only record of working sessions. Newest entries first. Each entry states what was done, what
 was verified (and how), and what was left open. Do not rewrite past entries.
 
+## 2026-09-23 - Production live-data fix, global refresh button, job ceilings
+
+**Scope:** production debugging through the Supabase and Vercel MCPs, a global manual refresh
+control, and job-route duration ceilings.
+
+**What was done**
+
+1. **Empty-dashboard root cause (Vercel MCP).** `NEXT_PUBLIC_SUPABASE_URL` held
+   `https://supabase.com/dashboard/project/...` (the dashboard URL) instead of
+   `https://<ref>.supabase.co`. Every `supabase-js` select received the SPA HTML and failed JSON
+   parsing (`Unexpected token '<'`), rendering em dashes across the UI while the banner showed
+   "Live" green (the banner only checks variable presence). Corrected with `edit_project_env` and
+   redeployed; `/api/health` reports `ok: true, dataMode: live` and `/sources` renders live rows.
+2. **Migrations were already applied.** The Supabase MCP showed eleven combined migrations and a
+   populated database (864 models, 2322 news items); a diagnostic test validated every table
+   against the Zod row schemas with zero rejected rows. No SQL needed to be applied.
+3. **Stale data explained.** No `ingestion_runs` existed after 2026-09-21 and `/api/cron` had never
+   been called: the `vercel.json` schedule first reached a READY production deployment on
+   2026-09-23 and QStash is unconfigured. The core pipeline was then executed against the live
+   database from a local server: models (673 Artificial Analysis / 454 OpenRouter / 200 Hugging
+   Face), AI news, social and harness pricing runs all recorded `success` on 2026-09-23.
+4. **Global refresh button.** `src/components/shell/quick-sync.tsx` mounted in the app shell header
+   runs `job: "all"` through `/api/jobs/manual`, reuses the `amih_admin_key` localStorage token,
+   opens the token popover on 401 and calls `router.refresh()` on success.
+5. **Duration ceilings.** `/api/jobs/manual` and `/api/cron` moved from `maxDuration = 60` to `300`:
+   a full four-job pass measured ~83s, so 60s truncated it on a deployed run.
+
+**Verified**
+
+- `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm run test` (267 tests across 13
+  files) and `npm run build` (26 routes) all exit 0.
+
+**Open**
+
+- GDELT remains `rate_limited` on every run; world news still needs `WORLD_NEWS_API_KEY`.
+- `CRON_SECRET` was created in Vercel on 2026-09-23; the daily `0 4 * * *` UTC run had not yet fired
+  when this session ended — confirm the first scheduled execution.
+
 ## 2026-09-22 - Vercel deployment preparation, Vercel Cron & Manual Ingestion
 
 **Scope:** Supabase credential mapping from dashboard screenshots, Vercel Cron integration (with Hobby plan

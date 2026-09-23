@@ -8,6 +8,7 @@ import { NAV_SECTIONS, MOBILE_TABS, isActivePath, workspaceForPath } from "@/lib
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme";
+import { QuickSyncButton } from "./quick-sync";
 import { CommandPalette } from "./command-palette";
 import type { SearchEntry } from "@/lib/search";
 
@@ -285,6 +286,8 @@ export function AppShell({
                   {dataModeLabel}
                 </span>
               )}
+
+              <QuickSyncButton />
 
               <ThemeToggle />
             </div>

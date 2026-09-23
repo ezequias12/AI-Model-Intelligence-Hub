@@ -46,10 +46,11 @@ added or removed.
   across 13 files, and a 26-route production build.
 - `npm run test:e2e` (Playwright, desktop and mobile projects, mock mode): **205 passed, 5 skipped,
   0 failed**, including all 28 axe audits.
-- Visual sweep with a Playwright script, not only by reading code: **48 route/theme combinations at
-  1440px and 48 at 390px** (24 routes × light/dark), each asserting HTTP 200, no horizontal
-  overflow and an empty console. Two overflows were found this way and fixed; the final sweep is
-  clean on desktop and mobile.
+- Visual sweep with a Playwright script, not only by reading code: **96 combinations** (24 routes ×
+  light/dark × 1440px/390px). Final result: 96/96 HTTP 200, 96/96 with no horizontal overflow, and
+  zero uncaught page errors. The only console output on 18 of them is Next.js' dev-mode
+  "Failed to fetch RSC payload ... Falling back to browser navigation" prefetch cancellation, which
+  cannot occur in a production build. Two real overflows were found this way and fixed.
 - The theme toggle was exercised by a real click (light → dark → light): the `dark` class, inline
   `color-scheme` and persisted `amih.theme.v1` all follow, with body backgrounds `rgb(242,246,253)`
   and `rgb(10,10,10)` respectively.

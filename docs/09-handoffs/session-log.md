@@ -35,8 +35,9 @@ a hard guardrail: no route, filter, metric, ranking board, column, export or sta
 
 - `npm run check` exits 0: format, lint (no warnings), typecheck, 267 tests, 26-route build.
 - `npm run test:e2e`: **205 passed, 5 skipped, 0 failed**, including all 28 axe audits.
-- Playwright visual sweep of **24 routes × 2 themes × 2 viewports**, asserting HTTP 200, no
-  horizontal overflow and an empty console; final sweep clean.
+- Playwright visual sweep of **96 combinations** (24 routes × light/dark × 1440px/390px): 96/96
+  HTTP 200, 96/96 no horizontal overflow, zero uncaught page errors. The only console output is the
+  Next.js dev-mode RSC prefetch cancellation on 18 of them.
 - Theme toggle exercised by a real click in light → dark → light: class, `color-scheme` and the
   persisted `amih.theme.v1` all follow.
 

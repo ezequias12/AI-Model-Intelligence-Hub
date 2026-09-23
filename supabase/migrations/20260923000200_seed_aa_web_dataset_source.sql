@@ -11,6 +11,16 @@
 --
 -- See ADR-0011 for why an API-first project accepts this one exception.
 
+-- The type is new, so the column's check constraint has to admit it before the
+-- row can be inserted. Recreated rather than relaxed, so the allowed set stays
+-- explicit.
+alter table public.sources drop constraint if exists sources_type_check;
+alter table public.sources add constraint sources_type_check check (type = any (array[
+  'api', 'rss', 'atom', 'json', 'html', 'official_pricing', 'official_docs', 'official_site',
+  'official_changelog', 'github_releases', 'social_api', 'openrouter_models', 'huggingface_models',
+  'artificial_analysis_web', 'bluesky', 'hackernews', 'gdelt', 'manual'
+]));
+
 insert into public.sources (id, domain, name, type, url, enabled, priority, cadence_minutes, attribution, licensing_note, notes)
 values
   ('artificial-analysis-web', 'models', 'Artificial Analysis web dataset', 'artificial_analysis_web',

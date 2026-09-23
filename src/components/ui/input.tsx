@@ -20,10 +20,10 @@ export const Input = React.forwardRef<
     autoComplete={autoComplete ?? "off"}
     spellCheck={spellCheck ?? false}
     className={cn(
-      "flex h-9 w-full rounded-control border border-input bg-background px-2.5 text-sm text-foreground",
+      "flex h-9 w-full rounded-control border border-input bg-surface px-2.5 text-sm text-foreground",
       "transition-[border-color,background-color] duration-150 ease-out",
       "placeholder:text-muted-foreground",
-      "hover:border-muted-foreground/40",
+      "hover:border-border-strong",
       "disabled:cursor-not-allowed disabled:opacity-50",
       className,
     )}
@@ -45,15 +45,15 @@ export const Select = React.forwardRef<
   <select
     ref={ref}
     className={cn(
-      "h-8 w-full appearance-none rounded-control border border-input bg-background bg-[length:14px] bg-[right_0.5rem_center] bg-no-repeat pl-2.5 pr-7 text-sm text-foreground",
+      "h-8 w-full appearance-none rounded-control border border-input bg-surface bg-[length:14px] bg-[right_0.5rem_center] bg-no-repeat pl-2.5 pr-7 text-sm text-foreground",
       "transition-[border-color,background-color] duration-150 ease-out",
-      "hover:border-muted-foreground/40",
+      "hover:border-border-strong",
       "disabled:cursor-not-allowed disabled:opacity-50",
       className,
     )}
     style={{
       backgroundImage:
-        "url(\"data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%237c8a94' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",
+        "url(\"data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2380808a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",
       ...style,
     }}
     {...props}
@@ -93,7 +93,7 @@ export const Checkbox = React.forwardRef<
     ref={ref}
     type="checkbox"
     className={cn(
-      "h-3.5 w-3.5 shrink-0 cursor-pointer rounded-[4px] border border-input bg-background accent-[hsl(var(--primary))] transition-colors duration-150",
+      "h-3.5 w-3.5 shrink-0 cursor-pointer rounded-[4px] border border-input bg-surface accent-[hsl(var(--primary))] transition-colors duration-150",
       className,
     )}
     {...props}

@@ -178,7 +178,11 @@ function ModelComparison(): React.JSX.Element {
 
       <Card>
         <CardContent className="p-0">
-          <div className="scroll-thin overflow-x-auto">
+          {/* `relative` is load-bearing: the visually-hidden spans inside the
+              cells are absolutely positioned, and without a containing block
+              here they resolve against a far ancestor and stretch the document
+              instead of scrolling inside this box. */}
+          <div className="scroll-thin relative overflow-auto">
             <table className="w-full min-w-[720px] border-collapse text-xs">
               <caption className="sr-only">Model comparison across every registered metric</caption>
               <thead className="bg-surface">
@@ -431,7 +435,7 @@ function PlanComparison({
             </p>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="scroll-thin overflow-x-auto">
+            <div className="scroll-thin relative overflow-auto">
               <table className="w-full min-w-[720px] border-collapse text-xs">
                 <caption className="sr-only">Harness plan comparison</caption>
                 <thead className="bg-surface">

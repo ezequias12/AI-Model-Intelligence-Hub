@@ -16,9 +16,10 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/95",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-accent active:bg-secondary",
+        secondary:
+          "bg-secondary text-secondary-foreground hover:bg-accent active:bg-surface-sunken",
         outline:
-          "border border-border bg-transparent text-foreground hover:border-input hover:bg-accent active:bg-accent/70",
+          "border border-border bg-transparent text-foreground hover:border-border-strong hover:bg-accent active:bg-accent/70",
         ghost: "text-muted-foreground hover:bg-accent hover:text-foreground",
         /* A tinted, borderless surface for controls that sit inside panels. */
         subtle: "bg-surface-sunken text-foreground hover:bg-accent",

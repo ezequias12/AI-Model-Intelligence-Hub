@@ -150,9 +150,11 @@ export function Segmented<T extends string>({
             title={option.title ?? option.label}
             onClick={() => onChange(option.value)}
             className={cn(
-              "rounded-[6px] font-medium transition-[background-color,color] duration-150 ease-out",
+              "rounded-[6px] font-medium transition-[background-color,color,box-shadow] duration-150 ease-out",
               size === "sm" ? "px-2 py-1 text-xs" : "px-2.5 py-1.5 text-sm",
-              selected ? "bg-card text-foreground" : "text-muted-foreground hover:text-foreground",
+              selected
+                ? "bg-card text-foreground shadow-card"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             {option.label}

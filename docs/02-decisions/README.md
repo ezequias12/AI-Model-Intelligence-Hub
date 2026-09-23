@@ -20,6 +20,7 @@ the old one `Superseded by ADR-XXXX` rather than rewriting history.
 | ADR-0007 | Harness plan snapshots with stable canonical plan keys | Accepted | `ADR-0007-harness-plan-snapshots.md` |
 | ADR-0008 | Mock mode is a first-class mode; degraded live mode is surfaced | Accepted | `ADR-0008-mock-live-modes.md` |
 | ADR-0009 | Free, key-less community and news sources; X out of scope | Accepted | `ADR-0009-free-community-and-news-sources.md` |
+| ADR-0010 | A blue brand on a Fina-light, Vercel-dark visual system | Accepted | `ADR-0010-blue-brand-visual-system.md` |
 
 ## Conventions
 

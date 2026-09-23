@@ -3,7 +3,6 @@
 import * as React from "react";
 import {
   CartesianGrid,
-  Legend,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -13,6 +12,13 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  CHART_GRID,
+  CHART_SERIES,
+  CHART_TICK,
+  CHART_TOOLTIP_STYLE,
+  formatChartTick,
+} from "@/components/charts/theme";
 import { cn } from "@/lib/utils/cn";
 import type { ModelSnapshot } from "@/lib/domain/schema";
 import { blendedPrice } from "@/lib/domain/metrics";
@@ -20,10 +26,10 @@ import { blendedPrice } from "@/lib/domain/metrics";
 type SeriesKey = "intelligence" | "coding" | "agentic" | "blendedPrice";
 
 const SERIES: Array<{ key: SeriesKey; label: string; color: string }> = [
-  { key: "intelligence", label: "Intelligence", color: "#2563eb" },
-  { key: "coding", label: "Coding", color: "#7c3aed" },
-  { key: "agentic", label: "Agentic", color: "#0d9488" },
-  { key: "blendedPrice", label: "Blended price (USD/1M)", color: "#d97706" },
+  { key: "intelligence", label: "Intelligence", color: CHART_SERIES[0] },
+  { key: "coding", label: "Coding", color: CHART_SERIES[1] },
+  { key: "agentic", label: "Agentic", color: CHART_SERIES[2] },
+  { key: "blendedPrice", label: "Blended price (USD/1M)", color: CHART_SERIES[3] },
 ];
 
 export function ModelHistoryChart({
@@ -109,31 +115,20 @@ export function ModelHistoryChart({
         <div className="h-[280px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
-              <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" opacity={0.5} />
-              <XAxis
-                dataKey="label"
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-              />
-              <YAxis
-                yAxisId="left"
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                width={44}
-              />
+              <CartesianGrid {...CHART_GRID} />
+              <XAxis dataKey="label" tick={CHART_TICK} />
+              <YAxis yAxisId="left" tick={CHART_TICK} tickFormatter={formatChartTick} width={44} />
               <YAxis
                 yAxisId="right"
                 orientation="right"
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                tick={CHART_TICK}
+                tickFormatter={formatChartTick}
                 width={52}
               />
-              <Tooltip
-                contentStyle={{
-                  fontSize: 11,
-                  background: "hsl(var(--popover))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: 8,
-                }}
-              />
-              <Legend wrapperStyle={{ fontSize: 10 }} />
+              <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+              {/* The series toggles in the card header are this chart's legend:
+                  they carry every label and toggle the lines, so a second static
+                  legend under the plot would only repeat them. */}
               {SERIES.filter((series) => series.key !== "blendedPrice").map((series) => (
                 <Line
                   key={series.key}
@@ -153,7 +148,7 @@ export function ModelHistoryChart({
                 type="monotone"
                 dataKey="blendedPrice"
                 name="Blended price (USD/1M)"
-                stroke="#d97706"
+                stroke={CHART_SERIES[3]}
                 strokeWidth={2}
                 strokeDasharray="4 2"
                 dot={{ r: 2 }}

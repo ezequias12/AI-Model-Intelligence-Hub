@@ -20,6 +20,13 @@ import { Button } from "@/components/ui/button";
 import { Label, Select } from "@/components/ui/input";
 import { MetaLine, Segmented } from "@/components/ui/primitives";
 import { Modal } from "@/components/ui/overlay";
+import {
+  CHART_GRID,
+  CHART_INK,
+  CHART_LEGEND_STYLE,
+  CHART_TICK,
+  formatChartTick,
+} from "@/components/charts/theme";
 import { CHART_METRIC_KEYS } from "@/lib/analytics/metric-registry";
 import { computeLandscapeChart, type LandscapeChartResult } from "@/lib/analytics";
 import { cn } from "@/lib/utils/cn";
@@ -227,7 +234,7 @@ function ChartCard({ initial }: { initial: ChartConfig }): React.JSX.Element {
           {/* Recharts marks every scatter symbol as role="img" with no name and
               offers no way to label it, so the plot is decorative here and the
               accessible data table below is its screen-reader equivalent. */}
-          <div className="h-[300px] w-full" aria-hidden="true">
+          <div className="h-[340px] w-full" aria-hidden="true">
             {body}
           </div>
 
@@ -321,20 +328,15 @@ function ChartBody({
   return (
     <ResponsiveContainer width="100%" height="100%">
       <ScatterChart margin={{ top: 8, right: 16, bottom: 24, left: 8 }}>
-        <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" opacity={0.5} />
+        <CartesianGrid {...CHART_GRID} />
         <XAxis
           type="number"
           dataKey="x"
           name={result.xLabel}
           scale={useLogX ? "log" : "auto"}
           domain={["auto", "auto"]}
-          tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-          label={{
-            value: result.xLabel,
-            position: "insideBottom",
-            offset: -12,
-            style: { fontSize: 10, fill: "hsl(var(--muted-foreground))" },
-          }}
+          tick={CHART_TICK}
+          tickFormatter={formatChartTick}
         />
         <YAxis
           type="number"
@@ -342,7 +344,8 @@ function ChartBody({
           name={result.yLabel}
           scale={useLogY ? "log" : "auto"}
           domain={["auto", "auto"]}
-          tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+          tick={CHART_TICK}
+          tickFormatter={formatChartTick}
           width={56}
         />
         <ZAxis
@@ -353,10 +356,10 @@ function ChartBody({
         />
         <Tooltip content={<ChartTooltip xLabel={result.xLabel} yLabel={result.yLabel} />} />
         <Legend
-          wrapperStyle={{ fontSize: 10 }}
+          wrapperStyle={CHART_LEGEND_STYLE}
           payload={[
-            { value: "In comparison set", type: "circle", color: "hsl(var(--primary))" },
-            { value: "Market context", type: "circle", color: "hsl(var(--muted-foreground))" },
+            { value: "In comparison set", type: "circle", color: CHART_INK.primary },
+            { value: "Market context", type: "circle", color: CHART_INK.muted },
           ]}
         />
         <Scatter
@@ -387,9 +390,7 @@ function renderPoint(
 ): React.ReactElement<SVGElement> {
   const { cx = 0, cy = 0, payload } = (props ?? {}) as PointShapeProps;
   const frontier = showFrontier && payload?.onFrontier;
-  const fill = payload?.selected
-    ? (payload.providerColor ?? "hsl(var(--primary))")
-    : "hsl(var(--muted-foreground))";
+  const fill = payload?.selected ? (payload.providerColor ?? CHART_INK.primary) : CHART_INK.muted;
 
   return (
     <g>
@@ -399,14 +400,14 @@ function renderPoint(
           cy={cy}
           r={8}
           fill="none"
-          stroke="hsl(var(--primary))"
+          stroke={CHART_INK.primary}
           strokeWidth={1.5}
           strokeDasharray="2 2"
         />
       )}
       <circle cx={cx} cy={cy} r={4} fill={fill} fillOpacity={payload?.selected ? 0.95 : 0.4} />
       {showLabels && payload && (
-        <text x={cx + 7} y={cy + 3} fontSize={9} fill="hsl(var(--foreground))">
+        <text x={cx + 7} y={cy + 3} fontSize={9} fill={CHART_INK.label}>
           {payload.shortName}
         </text>
       )}

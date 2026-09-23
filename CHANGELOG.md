@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed (interface redesign, ADR-0010)
+
+- **One blue brand accent in both themes.** The primary token moves from cyan-teal (hue 192) to
+  blue: `#2b57f0` in light, `#0072f5`-family in dark. Blue is used for links, focus, active and
+  selected states, chart series and highlights only — never across large surfaces.
+- **Light mode follows Fina**: page background `#f3f6fd` with a deliberate blue tint, white cards,
+  `#e1e8f5` borders, and a barely-there blue-tinted card shadow. Dark mode follows Vercel: pure
+  neutral surfaces (`#0a0a0a` / `#111111` / `#191919`), `#2a2a2a` hairlines, `#fafafa` text, and no
+  card shadow at all — the hairline is the elevation.
+- **Self-hosted Geist** (Sans + Mono, `geist` package) replaces the system font stacks. Bundled, so
+  builds and offline environments are unaffected; the system stack remains as a fallback.
+- **Shared chart theme** (`src/components/charts/theme.ts`): one series palette, axis, grid, tooltip
+  and legend definition, a numeric tick formatter and a deterministic accent helper. The two
+  Recharts modules, the harness product marks and the analytics provider-colour fallback now read
+  from it instead of hardcoding colours.
+- **Metric leaders are tiered**: three primary readings (highest intelligence, best weighted value,
+  fastest output) above five compact secondary ones. All eight readings still render.
+- New tokens: `--border-strong`, `--shadow-card`, `--chart-1`..`--chart-6`, exposed as
+  `border-border-strong`, `shadow-card` and `chart-1`..`chart-6`.
+- Inputs and selects now sit on the surface they are placed on (`bg-surface`) rather than on the
+  page background, matching both references.
+
+### Fixed (interface redesign)
+
+- Recharts legends overlapped their own entries: the shared `wrapperStyle` was overriding the
+  library default's `width: 100%`. The shared style now passes it back explicitly.
+- Chart axes rendered raw floats (`0.35000000000000003`); axis ticks now format by magnitude.
+- The landscape charts carried an in-chart X axis label that collided with the legend and merely
+  repeated the card header; it is removed. The snapshot history chart's static legend was removed
+  because the interactive series toggles above it already carry every label.
+- The Provider segmented control in the filter bar could not shrink below its content width, making
+  the document 36px wider than a 390px viewport. It scrolls inside its own box now.
+- A visually-hidden span inside a compare table cell is absolutely positioned; with no containing
+  block in the table's scroll wrapper it resolved against a distant ancestor and stretched the
+  document by 323px at narrow widths. The wrapper is now a containing block.
+- Light-mode semantic ink (success, warning, info, destructive, muted foreground) is darker than
+  the reference palette so 11px badges meet WCAG AA on their own tints; the axe audit failed 28
+  assertions at the lighter values.
+
 ### Added
 
 - `QuickSyncButton` (`src/components/shell/quick-sync.tsx`), mounted in the app shell header: runs

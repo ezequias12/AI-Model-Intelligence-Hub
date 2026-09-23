@@ -3,6 +3,49 @@
 Append-only record of working sessions. Newest entries first. Each entry states what was done, what
 was verified (and how), and what was left open. Do not rewrite past entries.
 
+## 2026-09-23 - Interface redesign: Fina light, Vercel dark, one blue brand
+
+**Scope:** a full visual redesign of every workspace from three references (Vercel for dark, the
+owner's Fina project for light, a prior GPT Astra mockup for salvageable ideas). Functionality was
+a hard guardrail: no route, filter, metric, ranking board, column, export or state was removed.
+
+**What was done**
+
+1. **Token layer** (`src/app/globals.css`, `tailwind.config.ts`). Light adopts Fina's surfaces
+   (`#f3f6fd` tinted page, white cards, `#e1e8f5` borders, brand `#2b57f0`); dark adopts Vercel's
+   (`#0a0a0a` / `#111111` / `#191919`, `#2a2a2a` hairlines, `#fafafa` text, purely neutral). Added
+   `--border-strong`, `--shadow-card` and `--chart-1..6`. The accent moved from cyan-teal (hue 192)
+   to blue — ADR-0010 records that this reverses a documented design position.
+2. **Self-hosted Geist** wired in `src/app/layout.tsx` (bundled, no network fetch) with the system
+   stack as fallback; `themeColor` updated.
+3. **Shared chart theme** (`src/components/charts/theme.ts`) and the three consumers refactored off
+   hardcoded colours.
+4. **Metric leaders tiered** into three primary and five compact secondary readings; all eight still
+   render.
+5. **Two chart defects fixed**: the Recharts legend `wrapperStyle` dropped the default `width: 100%`
+   so entries overlapped; axis ticks rendered raw floats. The redundant in-chart axis label and the
+   duplicate static legend were removed where a header already carried the same information.
+6. **Two responsive defects fixed** during the visual audit: an unshrinkable Provider segmented
+   control (document +36px at 390px) and an absolutely-positioned visually-hidden span inside a
+   compare table cell that escaped its scroll container and stretched the document by 323px.
+7. **Contrast regression caught**: the first pass used Fina's semantic colours verbatim and the axe
+   audit failed 28 assertions at badge size; light-mode semantic ink was darkened until AA passed.
+
+**Verified**
+
+- `npm run check` exits 0: format, lint (no warnings), typecheck, 267 tests, 26-route build.
+- `npm run test:e2e`: **205 passed, 5 skipped, 0 failed**, including all 28 axe audits.
+- Playwright visual sweep of **24 routes × 2 themes × 2 viewports**, asserting HTTP 200, no
+  horizontal overflow and an empty console; final sweep clean.
+- Theme toggle exercised by a real click in light → dark → light: class, `color-scheme` and the
+  persisted `amih.theme.v1` all follow.
+
+**Open**
+
+- `tests/e2e/axe.spec.ts` runs in the Playwright default colour scheme (light); dark-mode contrast
+  was reviewed visually only, and no automated dark-theme contrast gate exists.
+- `supabase/all_migrations_combined.sql` predates this session and was left untracked.
+
 ## 2026-09-23 - Production live-data fix, global refresh button, job ceilings
 
 **Scope:** production debugging through the Supabase and Vercel MCPs, a global manual refresh

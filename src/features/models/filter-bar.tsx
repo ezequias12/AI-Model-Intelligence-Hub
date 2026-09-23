@@ -65,11 +65,14 @@ export function ModelFilterBar({
         </div>
       )}
 
-      <div className="flex items-center gap-2">
+      <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
         <span className="text-2xs font-medium text-muted-foreground">Provider</span>
+        {/* Six options are wider than a phone viewport. The control scrolls
+            inside its own box rather than pushing the whole page sideways. */}
         <Segmented
           ariaLabel="Provider group filter"
           size="sm"
+          className="min-w-0 max-w-full overflow-x-auto"
           value={workspace.providerFilter}
           onChange={(value: ProviderFilterValue) => workspace.setProviderFilter(value)}
           options={OPTIONS}

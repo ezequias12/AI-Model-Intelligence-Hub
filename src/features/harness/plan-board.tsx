@@ -6,28 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Panel, Section } from "@/components/ui/card";
 import { RelativeTime } from "@/components/ui/relative-time";
 import { cn } from "@/lib/utils/cn";
+import { accentForId } from "@/components/charts/theme";
 import { deriveHarnessPlanMetrics, type HarnessPlanDerived } from "@/lib/domain/harness-metrics";
 import type { HarnessPlan, HarnessPlanSnapshot, HarnessProduct } from "@/lib/domain/schema";
 import { DASH, formatEnumLabel, formatUnitPrice } from "@/lib/format";
 
-const PRODUCT_ACCENTS = [
-  "#2563eb",
-  "#0891b2",
-  "#7c3aed",
-  "#c2410c",
-  "#15803d",
-  "#be123c",
-  "#4f46e5",
-  "#0f766e",
-];
-
 /** Deterministic accent so a product keeps the same mark colour across views. */
 export function productAccent(name: string): string {
-  let hash = 0;
-  for (let index = 0; index < name.length; index += 1) {
-    hash = (hash * 31 + name.charCodeAt(index)) % 997;
-  }
-  return PRODUCT_ACCENTS[hash % PRODUCT_ACCENTS.length] ?? "#2563eb";
+  return accentForId(name);
 }
 
 /**

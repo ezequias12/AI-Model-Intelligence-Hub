@@ -18,7 +18,10 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        border: "hsl(var(--border))",
+        border: {
+          DEFAULT: "hsl(var(--border))",
+          strong: "hsl(var(--border-strong))",
+        },
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
@@ -69,6 +72,14 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        chart: {
+          1: "hsl(var(--chart-1))",
+          2: "hsl(var(--chart-2))",
+          3: "hsl(var(--chart-3))",
+          4: "hsl(var(--chart-4))",
+          5: "hsl(var(--chart-5))",
+          6: "hsl(var(--chart-6))",
+        },
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
@@ -105,14 +116,16 @@ const config: Config = {
       },
 
       /**
-       * Elevation is declared once per element: a hairline border at rest, a
-       * shadow only when the element actually floats. The former `subtle` token
-       * was a border under a wide soft shadow, which reads as a ghost card.
+       * Elevation. A hairline border is the structural device in both themes.
+       * The light theme adds a barely-there card shadow that resolves to `none`
+       * in dark, where the hairline alone separates surfaces. Overlays are the
+       * only objects that float in either theme.
        */
       boxShadow: {
+        card: "var(--shadow-card)",
         overlay:
-          "0 1px 0 0 hsl(var(--border) / 0.6), 0 16px 40px -12px hsl(var(--shadow-color) / 0.28), 0 4px 12px -6px hsl(var(--shadow-color) / 0.16)",
-        tooltip: "0 8px 20px -8px hsl(var(--shadow-color) / 0.32)",
+          "0 1px 0 0 hsl(var(--border) / 0.6), 0 16px 40px -12px hsl(var(--shadow-color) / 0.34), 0 4px 12px -6px hsl(var(--shadow-color) / 0.2)",
+        tooltip: "0 8px 20px -8px hsl(var(--shadow-color) / 0.38)",
       },
 
       spacing: {

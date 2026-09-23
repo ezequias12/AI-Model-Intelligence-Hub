@@ -4,9 +4,10 @@ import { cn } from "@/lib/utils/cn";
 /**
  * Panel.
  *
- * Elevation is declared once: a hairline border, a flat surface, and no drop
- * shadow. A 1px border under a wide soft shadow is the ghost card the craft
- * floor names; overlays are the only elevated objects in this product.
+ * The hairline border is what structures the page in every theme. In the light
+ * theme a panel also carries a barely-there shadow so white paper separates
+ * from the tinted page behind it; that shadow resolves to `none` in dark, where
+ * the border alone does the work.
  *
  * A panel is used only where content is genuinely card-shaped. Prefer grouping
  * with `PanelHeader` over nesting containers inside containers.
@@ -15,7 +16,10 @@ export const Panel = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLD
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn("rounded-panel border border-border bg-card text-card-foreground", className)}
+      className={cn(
+        "rounded-panel border border-border bg-card text-card-foreground shadow-card",
+        className,
+      )}
       {...props}
     />
   ),

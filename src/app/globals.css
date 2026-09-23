@@ -5,123 +5,186 @@
 /**
  * Design tokens.
  *
- * Neutrals carry a whisper of the brand hue (cyan-teal, chroma below 0.02) so
- * surfaces read as authored rather than as empty grey. The interactive accent is
- * deep cyan-teal: this product is a measurement instrument, and the accent is
- * deliberately not the blue-violet every technology product reaches for.
+ * Two references, one system. The dark theme follows Vercel: pure neutral
+ * near-black surfaces, 1px hairlines doing all the structural work, and
+ * elevation carried by border rather than shadow. The light theme follows Fina:
+ * a page background with a deliberate cool-blue tint (never a neutral grey) and
+ * white cards that read as paper laid on it.
+ *
+ * The brand accent is blue, in both themes, and it stays an accent: links,
+ * focus, active/selected states, chart series and small highlights. It is never
+ * painted across surfaces, so the dark theme does not turn into a blue theme.
  *
  * Both themes are first-class because the use scene demands both: an analyst
  * works in a bright office and at night.
  */
 @layer base {
   :root {
-    /* System stacks on purpose: no network font fetch, so builds and offline
-       environments behave identically. Monospace is reserved for numbers and
+    /* Geist ships with the bundle (no network fetch), so builds and offline
+       environments behave identically. The fallback stack keeps that true even
+       if the variable is ever missing. Monospace is reserved for numbers and
        identifiers, where it is a measurement voice rather than a costume. */
-    --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI",
-      Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
-    --font-mono: ui-monospace, "SFMono-Regular", "SF Mono", "Cascadia Mono", "Segoe UI Mono",
-      Consolas, "Liberation Mono", Menlo, monospace;
+    --font-sans: var(
+      --font-geist-sans,
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      "Segoe UI Variable Text",
+      "Segoe UI",
+      Roboto,
+      "Helvetica Neue",
+      Arial,
+      "Noto Sans",
+      sans-serif
+    );
+    --font-mono: var(
+      --font-geist-mono,
+      ui-monospace,
+      "SFMono-Regular",
+      "SF Mono",
+      "Cascadia Mono",
+      "Segoe UI Mono",
+      Consolas,
+      "Liberation Mono",
+      Menlo,
+      monospace
+    );
 
-    --background: 200 30% 99%;
-    --foreground: 205 30% 13%;
+    /* ---- Light: Fina. Cool blue-tinted neutrals, white paper surfaces. ---- */
+    --background: 220 71% 97%;
+    --foreground: 222 47% 11%;
 
-    --surface: 200 22% 97%;
-    --surface-raised: 200 30% 99.5%;
-    --surface-sunken: 200 20% 94.5%;
+    --surface: 0 0% 100%;
+    --surface-raised: 216 100% 98%;
+    --surface-sunken: 219 68% 96%;
 
-    --card: 200 30% 99.5%;
-    --card-foreground: 205 30% 13%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
 
-    --popover: 200 30% 99.5%;
-    --popover-foreground: 205 30% 13%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 192 90% 30%;
-    --primary-foreground: 195 60% 98%;
-    --primary-muted: 192 60% 95%;
+    --primary: 226 87% 55%;
+    --primary-foreground: 0 0% 100%;
+    --primary-muted: 226 87% 95%;
 
-    --secondary: 200 18% 95%;
-    --secondary-foreground: 205 24% 20%;
+    --secondary: 219 68% 96%;
+    --secondary-foreground: 222 40% 18%;
 
-    --muted: 200 18% 95%;
-    --muted-foreground: 205 14% 40%;
+    --muted: 219 68% 96%;
+    --muted-foreground: 215 20% 40%;
 
-    --accent: 200 20% 93%;
-    --accent-foreground: 205 28% 16%;
+    --accent: 216 72% 95%;
+    --accent-foreground: 222 45% 16%;
 
+    /*
+     * Semantic ink. These are darker than the reference palette on purpose: a
+     * badge renders at 11px on its own tinted background, and the lighter
+     * "brand" tone of each hue fails WCAG AA there. The surface is Fina; the
+     * text on it has to carry its own contrast.
+     */
     --destructive: 6 74% 42%;
-    --destructive-foreground: 6 60% 99%;
+    --destructive-foreground: 0 0% 100%;
     --destructive-muted: 6 70% 96%;
 
     --success: 158 64% 27%;
-    --success-foreground: 158 50% 98%;
-    --success-muted: 158 46% 95%;
+    --success-foreground: 0 0% 100%;
+    --success-muted: 158 46% 94%;
 
-    --warning: 28 90% 33%;
+    --warning: 30 85% 30%;
     --warning-foreground: 30 80% 98%;
-    --warning-muted: 34 88% 94%;
+    --warning-muted: 34 88% 93%;
 
-    /* Informational emphasis is a desaturated slate, not another bright hue:
-       it must not compete with the accent or with semantic states. */
-    --info: 214 20% 40%;
-    --info-foreground: 210 40% 98%;
-    --info-muted: 212 24% 95%;
+    /* Informational emphasis is the blue family, dark enough to be read at
+       badge size against its own tint. */
+    --info: 217 80% 40%;
+    --info-foreground: 0 0% 100%;
+    --info-muted: 217 91% 95%;
 
-    --border: 200 14% 88%;
-    --input: 200 16% 84%;
-    --ring: 192 90% 34%;
-    --shadow-color: 205 40% 20%;
+    --border: 215 53% 92%;
+    --border-strong: 217 51% 85%;
+    --input: 217 51% 85%;
+    --ring: 226 87% 55%;
+    --shadow-color: 222 47% 20%;
+
+    /* Chart series. The brand blue leads, then a hue wheel that stays legible
+       against white paper. Never the only signal: series always carry a legend
+       and an accessible data table. */
+    --chart-1: 226 87% 55%;
+    --chart-2: 262 83% 58%;
+    --chart-3: 173 80% 36%;
+    --chart-4: 38 92% 45%;
+    --chart-5: 161 94% 30%;
+    --chart-6: 330 81% 55%;
+
+    /* Light is the only theme that lifts a card off the page, and only barely:
+       a hairline contact shadow plus a wide, blue-tinted ambient one. */
+    --shadow-card: 0 1px 2px hsl(var(--shadow-color) / 0.04),
+      0 10px 24px -18px hsl(var(--primary) / 0.16);
 
     color-scheme: light;
   }
 
+  /* ---- Dark: Vercel. Pure neutral graphite; the accent is a blue highlight. ---- */
   .dark {
-    --background: 205 30% 8%;
-    --foreground: 200 16% 94%;
+    --background: 0 0% 4%;
+    --foreground: 0 0% 98%;
 
-    --surface: 205 26% 11%;
-    --surface-raised: 205 24% 13%;
-    --surface-sunken: 205 32% 6%;
+    --surface: 0 0% 6.7%;
+    --surface-raised: 0 0% 9.8%;
+    --surface-sunken: 0 0% 2%;
 
-    --card: 205 24% 11.5%;
-    --card-foreground: 200 16% 94%;
+    --card: 0 0% 6.7%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 205 24% 13%;
-    --popover-foreground: 200 16% 94%;
+    --popover: 0 0% 9.8%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 189 82% 58%;
-    --primary-foreground: 205 42% 9%;
-    --primary-muted: 192 40% 18%;
+    --primary: 212 100% 54%;
+    --primary-foreground: 0 0% 4%;
+    --primary-muted: 212 60% 18%;
 
-    --secondary: 205 18% 18%;
-    --secondary-foreground: 200 16% 92%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 92%;
 
-    --muted: 205 18% 16%;
-    --muted-foreground: 200 11% 64%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 63%;
 
-    --accent: 205 20% 20%;
-    --accent-foreground: 200 16% 94%;
+    --accent: 0 0% 15%;
+    --accent-foreground: 0 0% 98%;
 
-    --destructive: 6 72% 62%;
-    --destructive-foreground: 6 40% 10%;
-    --destructive-muted: 6 34% 18%;
+    --destructive: 0 91% 71%;
+    --destructive-foreground: 0 0% 8%;
+    --destructive-muted: 0 45% 18%;
 
-    --success: 156 52% 52%;
-    --success-foreground: 156 40% 10%;
-    --success-muted: 156 26% 16%;
+    --success: 160 84% 39%;
+    --success-foreground: 0 0% 8%;
+    --success-muted: 160 40% 15%;
 
-    --warning: 38 88% 60%;
-    --warning-foreground: 34 50% 10%;
-    --warning-muted: 34 34% 17%;
+    --warning: 43 96% 56%;
+    --warning-foreground: 26 83% 10%;
+    --warning-muted: 40 45% 16%;
 
-    --info: 212 16% 66%;
-    --info-foreground: 212 30% 10%;
-    --info-muted: 212 20% 20%;
+    --info: 213 94% 68%;
+    --info-foreground: 0 0% 8%;
+    --info-muted: 213 50% 18%;
 
-    --border: 205 16% 20%;
-    --input: 205 16% 24%;
-    --ring: 189 82% 58%;
-    --shadow-color: 205 60% 2%;
+    --border: 0 0% 16.5%;
+    --border-strong: 0 0% 24%;
+    --input: 0 0% 20%;
+    --ring: 212 100% 54%;
+    --shadow-color: 0 0% 0%;
+
+    /* Chart series, lightened for a near-black canvas. The brand blue leads. */
+    --chart-1: 212 100% 60%;
+    --chart-2: 258 90% 72%;
+    --chart-3: 172 66% 50%;
+    --chart-4: 43 96% 60%;
+    --chart-5: 160 84% 45%;
+    --chart-6: 330 85% 68%;
+
+    /* Elevation in the dark theme is the hairline, not a shadow. */
+    --shadow-card: none;
 
     color-scheme: dark;
   }
@@ -138,7 +201,6 @@
 
   body {
     @apply bg-background text-base text-foreground antialiased;
-    font-feature-settings: "cv05", "cv08", "ss01";
   }
 
   /* Headings balance their line breaks; prose avoids orphans. */
@@ -188,7 +250,7 @@
 
   * {
     scrollbar-width: thin;
-    scrollbar-color: hsl(var(--border)) transparent;
+    scrollbar-color: hsl(var(--border-strong)) transparent;
   }
 
   ::-webkit-scrollbar {
@@ -201,14 +263,14 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background-color: hsl(var(--border));
+    background-color: hsl(var(--border-strong));
     border: 4px solid transparent;
     border-radius: 999px;
     background-clip: content-box;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background-color: hsl(var(--muted-foreground) / 0.5);
+    background-color: hsl(var(--muted-foreground) / 0.6);
   }
 
   ::-webkit-scrollbar-corner {
@@ -281,7 +343,7 @@
   }
 
   dialog.sheet::backdrop {
-    background-color: hsl(var(--shadow-color) / 0.5);
+    background-color: hsl(var(--shadow-color) / 0.55);
     backdrop-filter: blur(2px) saturate(0.9);
   }
 

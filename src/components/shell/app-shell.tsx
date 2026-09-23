@@ -168,8 +168,8 @@ export function AppShell({
                       "flex items-center gap-2.5 rounded-control px-2 py-[7px] text-sm transition-[background-color,color] duration-150 ease-out",
                       collapsed && "justify-center px-0",
                       active
-                        ? "bg-accent font-medium text-foreground"
-                        : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+                        ? "bg-primary-muted font-medium text-foreground"
+                        : "text-muted-foreground hover:bg-accent hover:text-foreground",
                     )}
                   >
                     <Icon
@@ -310,7 +310,9 @@ export function AppShell({
                       aria-current={active ? "page" : undefined}
                       className={cn(
                         "flex min-h-11 items-center gap-2 rounded-control px-2.5 text-sm",
-                        active ? "bg-accent font-medium text-foreground" : "text-muted-foreground",
+                        active
+                          ? "bg-primary-muted font-medium text-foreground"
+                          : "text-muted-foreground",
                       )}
                     >
                       <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />

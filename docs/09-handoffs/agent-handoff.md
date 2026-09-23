@@ -31,6 +31,13 @@ provider registry are seeded, and the runner persists model and harness change e
 Supabase persistence and QStash schedules/verification. Accessibility is audited with axe over fourteen routes.
 No result is claimed here; run `npm run check` and `npm run test:e2e`.
 
+The interface was redesigned on 2026-09-23 (ADR-0010): the brand accent is now **blue** in both
+themes (it was cyan-teal), light mode follows the owner's Fina project and dark mode follows
+Vercel, the typeface is self-hosted Geist, and every chart reads one shared theme module at
+`src/components/charts/theme.ts`. The redesign was presentation-only — no route, filter, metric,
+ranking board, export or state was removed, and the page-level scope matches the blueprint exactly.
+Recolouring the product is a single-file change now: the tokens live in `src/app/globals.css`.
+
 ## What to do first
 
 **Artificial Analysis is already verified** (2026-09-18): endpoint `/data/llms/models`, nested
@@ -100,6 +107,10 @@ itself, which is the property this repository is built around.
 | Harness plans or social accounts missing on a fresh database | The seeds are migrations `0007` and `0008` (superseded for accounts by `0014`). A database created before 2026-09-18 must apply them, or the pricing job writes no snapshots and the social job polls nothing |
 | Hugging Face popularity read as capability | `hfDownloads`/`hfLikes` are platform popularity, labelled as such; never a quality signal |
 | Someone expects X back | X is out of scope (ADR-0009). Community signal is Bluesky + Hacker News; do not reintroduce `X_BEARER_TOKEN` or scraping |
+| Light-mode semantic colours looking "too dark" next to the Fina reference | Intentional and required: badges render at 11px on their own tints, and the lighter reference tones failed 28 axe contrast assertions. Do not lighten `--success`, `--warning`, `--info`, `--destructive` or `--muted-foreground` in `:root` without re-running `npx playwright test axe` |
+| Assuming the axe audit covers dark mode | It does not. `tests/e2e/axe.spec.ts` runs in the Playwright default colour scheme, which is light. Dark-mode contrast is reviewed visually only |
+| A `Recharts` legend with overlapping entries | `wrapperStyle` replaces the library default wholesale, including its `width: 100%`. Read the shared style from `src/components/charts/theme.ts` rather than passing `{ fontSize }` |
+| A document wider than the viewport at narrow widths | Two causes were already fixed (a segmented control that could not shrink; an absolutely-positioned `sr-only` span escaping a scroll wrapper). If it recurs, check for an absolutely-positioned descendant inside an `overflow-auto` box that is not a containing block |
 
 ## Documentation rules
 

@@ -22,6 +22,23 @@ export const SOURCE_REGISTRY: SourceDefinition[] = [
     notes: "Primary model metrics source. Free tier rate limits apply.",
   },
   {
+    id: "artificial-analysis-web",
+    domain: "models",
+    name: "Artificial Analysis web dataset",
+    type: "artificial_analysis_web",
+    url: "https://artificialanalysis.ai/models",
+    enabled: true,
+    priority: 3,
+    // Daily, not on the model cadence: this is a supplement of a few dozen rows,
+    // and the vendor's API is the source of record for everything else.
+    cadenceMinutes: 1440,
+    attribution: "Artificial Analysis",
+    licensingNote:
+      "Reads the Schema.org Dataset blocks the vendor publishes in the page for machine consumption, which carry their own citation and license. Attribution is displayed. The vendor's Terms of Use apply.",
+    notes:
+      "Supplements the API with the per-task token split, which the free API tier does not expose. Each dataset block lists only the models the page displays, so coverage is a few dozen models rather than the whole catalogue.",
+  },
+  {
     id: "openrouter-models",
     domain: "models",
     name: "OpenRouter Models",

@@ -218,6 +218,7 @@ export const sourceTypeSchema = z.enum([
   "social_api",
   "openrouter_models",
   "huggingface_models",
+  "artificial_analysis_web",
   "bluesky",
   "hackernews",
   "gdelt",

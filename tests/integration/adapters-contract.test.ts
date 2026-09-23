@@ -4,6 +4,10 @@ import {
   mapArtificialAnalysisModel,
   toPersistenceRows,
 } from "@/lib/adapters/artificial-analysis";
+import {
+  fetchArtificialAnalysisWebTokens,
+  parseTokenDataset,
+} from "@/lib/adapters/artificial-analysis-web";
 import { fetchBlueskyPosts } from "@/lib/adapters/bluesky";
 import { fetchGdeltArticles } from "@/lib/adapters/gdelt";
 import { fetchHackerNewsPosts } from "@/lib/adapters/hackernews";
@@ -381,6 +385,97 @@ describe("Artificial Analysis adapter", () => {
     expect(result.error?.code).toBe("rate_limited");
     expect(result.error?.message).toContain("Deferred request");
     expect(result.error?.retryable).toBe(true);
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Artificial Analysis web dataset (JSON-LD)                                   */
+/* -------------------------------------------------------------------------- */
+
+describe("Artificial Analysis web dataset adapter", () => {
+  function pageWith(blocks: unknown[]): string {
+    const scripts = blocks
+      .map((block) => `<script type="application/ld+json">${JSON.stringify(block)}</script>`)
+      .join("");
+    return `<html><head>${scripts}</head><body></body></html>`;
+  }
+
+  it("reads the named dataset block instead of the surrounding markup", () => {
+    const html = pageWith([
+      { "@type": "Dataset", name: "Something Else", data: [{ label: "ignored" }] },
+      {
+        "@type": "Dataset",
+        name: "Output Tokens per Intelligence Index Task",
+        data: [
+          {
+            label: "Muse Glimmer (high)",
+            answer: 4377.33,
+            reasoning: 9547.86,
+            detailsUrl: "/models/muse-glimmer",
+          },
+          { label: "No slug", answer: 1, reasoning: 1 },
+          { label: "No tokens", detailsUrl: "/models/nothing" },
+        ],
+      },
+    ]);
+
+    const parsed = parseTokenDataset(html);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    // The row without a detailsUrl and the row without tokens are both dropped.
+    expect(parsed.items).toHaveLength(1);
+    expect(parsed.items[0]).toEqual({
+      slug: "muse-glimmer",
+      label: "Muse Glimmer (high)",
+      answerTokensPerTask: 4377.33,
+      reasoningTokensPerTask: 9547.86,
+    });
+  });
+
+  it("returns the parsed rows for the configured page", async () => {
+    const fetchImpl: FetchLike = async () => ({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      text: async () =>
+        pageWith([
+          {
+            "@type": "Dataset",
+            name: "Output Tokens per Intelligence Index Task",
+            data: [{ label: "M", answer: 10, reasoning: 20, detailsUrl: "/models/m" }],
+          },
+        ]),
+      json: async () => ({}),
+    });
+
+    const result = await fetchArtificialAnalysisWebTokens({ fetchImpl });
+    expect(result.ok).toBe(true);
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]?.slug).toBe("m");
+  });
+
+  it("fails loudly when the vendor stops publishing the block", () => {
+    const parsed = parseTokenDataset(pageWith([{ "@type": "Dataset", name: "Speed", data: [] }]));
+
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) return;
+    expect(parsed.reason).toContain("Output Tokens per Intelligence Index Task");
+  });
+
+  it("ignores an unparsable script rather than losing the whole page", () => {
+    const html = `<script type="application/ld+json">{ not json </script>${pageWith([
+      {
+        "@type": "Dataset",
+        name: "Output Tokens per Intelligence Index Task",
+        data: [{ label: "M", answer: 10, reasoning: 20, detailsUrl: "/models/m" }],
+      },
+    ])}`;
+
+    const parsed = parseTokenDataset(html);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.items).toHaveLength(1);
   });
 });
 

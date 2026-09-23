@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (Artificial Analysis data completeness, ADR-0011)
+
+- **The adapter now reads the documented free endpoint** `/api/v2/language/models/free` alongside
+  the legacy `/data/llms/models` path. The documented endpoint is authoritative; the legacy one only
+  fills what it uniquely has (the math index, and models the former omits). A null never displaces a
+  published value. This is what restores the `agentic` index, the cost per task and the cache
+  prices, which the legacy path never returned.
+- **New metrics**: `costPerTaskUsd` (vendor figure, free API tier), `answerTokensPerTask` and
+  `reasoningTokensPerTask` (vendor web dataset), plus derived `tokensPerTask`. Migration
+  `20260923000100` adds three nullable columns to `models`.
+- **New source** `artificial-analysis-web` (`src/lib/adapters/artificial-analysis-web.ts`): reads
+  the Schema.org `Dataset` blocks the vendor publishes in its comparison page for the per-task
+  token split, which the free API tier does not expose. Block selection is by name, a missing block
+  fails loudly, the payload is hashed, and coverage (a few dozen models) is stated in the UI.
+  Migration `20260923000200` seeds the registry row.
+- **New chart set** on `/models/landscape`, two cards to a row: intelligence per model, cost per
+  task per model, tokens per task per model (stacked answer/reasoning), and the
+  intelligence-against-cost Pareto scatter, which reuses the existing frontier implementation.
+
+### Fixed
+
+- **The weighted value score no longer blanks out when a component is missing.** `valueScore` had
+  returned null whenever any of intelligence/coding/agentic was absent from the population, so with
+  Artificial Analysis publishing no agentic index on the free tier the score was null for every
+  model — which emptied the "Best weighted value" card and the "Top 10 Cost Efficient — Weighted"
+  board. The weights are now renormalized over the components the source actually publishes, and the
+  explanation names which ones were used.
+- The adapter refuses to write an empty catalogue over the stored one: two endpoints returning zero
+  rows is now a failure, not a successful wipe.
+- A React fragment around Recharts `<Bar>` children silently produced an empty plot, because Recharts
+  discovers series by walking a chart's direct children.
+
+### Changed
+
+- `sync-models` runs every two hours instead of every thirty minutes: the adapter now issues about
+  five requests per run and the free tier allows 100 requests per 24 hours.
+
 ### Changed (interface redesign, ADR-0010)
 
 - **One blue brand accent in both themes.** The primary token moves from cyan-teal (hue 192) to

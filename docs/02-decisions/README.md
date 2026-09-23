@@ -21,6 +21,7 @@ the old one `Superseded by ADR-XXXX` rather than rewriting history.
 | ADR-0008 | Mock mode is a first-class mode; degraded live mode is surfaced | Accepted | `ADR-0008-mock-live-modes.md` |
 | ADR-0009 | Free, key-less community and news sources; X out of scope | Accepted | `ADR-0009-free-community-and-news-sources.md` |
 | ADR-0010 | A blue brand on a Fina-light, Vercel-dark visual system | Accepted | `ADR-0010-blue-brand-visual-system.md` |
+| ADR-0011 | One documented exception to API-first, for the vendor's own published dataset | Accepted | `ADR-0011-artificial-analysis-web-dataset.md` |
 
 ## Conventions
 

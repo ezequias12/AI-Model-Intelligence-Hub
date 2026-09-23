@@ -8,6 +8,7 @@
  */
 import { HttpClient, isDeferralError } from "@/lib/adapters/http";
 import { fetchArtificialAnalysis, toPersistenceRows } from "@/lib/adapters/artificial-analysis";
+import { fetchArtificialAnalysisWebTokens } from "@/lib/adapters/artificial-analysis-web";
 import { fetchBlueskyPosts } from "@/lib/adapters/bluesky";
 import {
   fetchGdeltArticles,
@@ -268,6 +269,99 @@ async function runSource(
         itemsSkipped: result.skipped,
         rateLimitRemaining: result.rateLimit.remaining,
         message: `Mapped ${result.items.length} models from Artificial Analysis (${changeSummary.written} change events).`,
+      });
+    }
+
+    /* ------------------ Artificial Analysis web dataset --------------------- */
+    if (source.type === "artificial_analysis_web") {
+      const repository = await getRepository();
+      const existingModels = await repository.getModels();
+
+      const result = await fetchArtificialAnalysisWebTokens({ fetchImpl });
+      if (!result.ok) {
+        return await adapterFailureOutcome(
+          writer,
+          source.id,
+          "sync-models",
+          now,
+          base,
+          result.error,
+          result.rateLimit,
+          "Artificial Analysis web dataset failed.",
+        );
+      }
+
+      // This source contributes exactly two columns. Every other value on the
+      // model keeps the figure the API published, so the enrichment can never
+      // move a metric backwards.
+      const bySlug = new Map(existingModels.map((model) => [model.slug, model]));
+      const updated: typeof existingModels = [];
+      for (const entry of result.items) {
+        const model = bySlug.get(entry.slug);
+        if (!model) continue;
+        updated.push({
+          ...model,
+          metrics: {
+            ...model.metrics,
+            answerTokensPerTask: entry.answerTokensPerTask,
+            reasoningTokensPerTask: entry.reasoningTokensPerTask,
+          },
+        });
+      }
+
+      if (!writer.enabled) {
+        return deferred(
+          { ...base, itemsSeen: result.items.length },
+          "Web dataset parsed but Supabase is not configured, so nothing was persisted.",
+        );
+      }
+
+      const unmatched = result.items.length - updated.length;
+
+      if (updated.length === 0) {
+        await recordRun(writer, source.id, "sync-models", now, {
+          itemsSeen: result.items.length,
+          itemsWritten: 0,
+          itemsSkipped: result.items.length,
+          rateLimitRemaining: result.rateLimit.remaining,
+          rateLimitResetAt: result.rateLimit.resetAt,
+          error: null,
+        });
+        return ok({
+          ...base,
+          itemsSeen: result.items.length,
+          itemsSkipped: result.items.length,
+          rateLimitRemaining: result.rateLimit.remaining,
+          message: `The web dataset listed ${result.items.length} models, none of which match the stored catalogue.`,
+        });
+      }
+
+      const modelSummary = await writer.writeModels(mergeModelSources(existingModels, updated));
+
+      if (modelSummary.errors.length > 0) {
+        return fail(
+          { ...base, itemsSeen: result.items.length, itemsWritten: modelSummary.written },
+          "failed",
+          modelSummary.errors[0] ?? "Write failed.",
+        );
+      }
+
+      await recordRun(writer, source.id, "sync-models", now, {
+        itemsSeen: result.items.length,
+        itemsWritten: modelSummary.written,
+        itemsSkipped: unmatched,
+        rateLimitRemaining: result.rateLimit.remaining,
+        rateLimitResetAt: result.rateLimit.resetAt,
+        error: null,
+      });
+
+      return ok({
+        ...base,
+        itemsSeen: result.items.length,
+        itemsWritten: modelSummary.written,
+        itemsSkipped: unmatched,
+        rateLimitRemaining: result.rateLimit.remaining,
+        message: `Enriched ${updated.length} of ${result.items.length} listed models with per-task token counts.`,
       });
     }
 

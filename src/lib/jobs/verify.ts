@@ -24,9 +24,16 @@ export function createReceiver(): Receiver | null {
   return new Receiver({ currentSigningKey, nextSigningKey });
 }
 
+export interface VerifyJobOptions {
+  allowUnverifiedInMock?: boolean;
+  authorization?: string | null;
+  cronSecret?: string | null;
+}
+
 /**
  * Verifies an incoming request.
  *
+ * Checks CRON_SECRET (Bearer or header) if configured, or verifies QStash signature.
  * In mock mode the check is skipped only when no signing keys exist AND the data
  * mode is `mock`, so local development works without pretending live triggers
  * are authenticated.
@@ -34,8 +41,20 @@ export function createReceiver(): Receiver | null {
 export async function verifyQStashRequest(
   body: string,
   signature: string | null,
-  options: { allowUnverifiedInMock?: boolean } = {},
+  options: VerifyJobOptions = {},
 ): Promise<VerificationResult> {
+  const configuredCronSecret = process.env.CRON_SECRET;
+
+  if (configuredCronSecret) {
+    const bearer = options.authorization?.startsWith("Bearer ")
+      ? options.authorization.slice("Bearer ".length).trim()
+      : null;
+    const provided = bearer ?? options.cronSecret;
+    if (provided && provided === configuredCronSecret) {
+      return { ok: true, status: 200, reason: "Authorized via CRON_SECRET." };
+    }
+  }
+
   const receiver = createReceiver();
 
   if (!receiver) {
@@ -50,12 +69,12 @@ export async function verifyQStashRequest(
       ok: false,
       status: 500,
       reason:
-        "QStash signing keys are not configured. Set QSTASH_CURRENT_SIGNING_KEY and QSTASH_NEXT_SIGNING_KEY.",
+        "QStash signing keys or CRON_SECRET are not configured. Set QSTASH_CURRENT_SIGNING_KEY / QSTASH_NEXT_SIGNING_KEY or CRON_SECRET.",
     };
   }
 
   if (!signature) {
-    return { ok: false, status: 401, reason: "Missing Upstash-Signature header." };
+    return { ok: false, status: 401, reason: "Missing Upstash-Signature or Authorization header." };
   }
 
   try {

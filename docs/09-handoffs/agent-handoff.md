@@ -25,11 +25,11 @@ single-page behaviour reconciled). The community/news pivot (ADR-0009) moved Soc
 the free, key-less **Bluesky** and **Hacker News** APIs, added **GDELT** for news and world, and
 extended the model garden with **OpenRouter** (breadth + context window) and **Hugging Face**
 (popularity) behind a field-precedence merge. The harness catalogue, community accounts and curated
-provider registry are seeded, and the runner persists model and harness change events. Three
-capabilities remain `IMPLEMENTED - LIVE VERIFICATION PENDING CREDENTIALS`: Supabase persistence,
-QStash schedules and signature verification, and the licensed world news provider (GDELT is the
-enabled free alternative). Accessibility is audited with axe over fourteen routes. No result is
-claimed here; run `npm run check` and `npm run test:e2e`.
+provider registry are seeded, and the runner persists model and harness change events. Vercel Cron
+(`vercel.json`, `/api/cron`), CRON_SECRET authentication, and a manual on-demand ingestion control in
+`/sources` (`/api/jobs/manual`) are in place. Two capabilities remain `IMPLEMENTED - LIVE VERIFICATION PENDING CREDENTIALS`:
+Supabase persistence and QStash schedules/verification. Accessibility is audited with axe over fourteen routes.
+No result is claimed here; run `npm run check` and `npm run test:e2e`.
 
 ## What to do first
 

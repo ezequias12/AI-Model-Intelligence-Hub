@@ -3,6 +3,30 @@
 Append-only record of working sessions. Newest entries first. Each entry states what was done, what
 was verified (and how), and what was left open. Do not rewrite past entries.
 
+## 2026-09-22 - Vercel deployment preparation, Vercel Cron & Manual Ingestion
+
+**Scope:** Supabase credential mapping from dashboard screenshots, Vercel Cron integration (with Hobby plan
+daily cadence), manual on-demand ingestion trigger (UI control in `/sources` + API endpoint), and CRON_SECRET
+authorization support.
+
+**What was done**
+
+1. **Vercel Cron setup:** Created `vercel.json` with a daily cron schedule (`0 4 * * *`) targeting `/api/cron`,
+   respecting Vercel Hobby tier limitations (max 2 cron jobs, max 1 execution per day, GET method).
+2. **Cron handler:** Implemented `src/app/api/cron/route.ts` with `CRON_SECRET` authorization support. Runs core
+   sync jobs sequentially.
+3. **Manual ingestion endpoint:** Implemented `src/app/api/jobs/manual/route.ts` allowing on-demand execution
+   with optional `adminKey`/`CRON_SECRET` verification.
+4. **Manual Sync UI:** Added `ManualSyncPanel` in `src/features/sources/source-registry.tsx` with job picker,
+   real-time execution progress, localStorage-persisted admin token, and feedback display.
+5. **Job verification enhancement:** Updated `src/lib/jobs/verify.ts` and `src/app/api/jobs/[job]/route.ts`
+   to support Bearer authorization via `CRON_SECRET` alongside QStash signatures.
+6. **Config & docs:** Updated `.env.example` with `CRON_SECRET`.
+
+**Verified**
+
+- `npm run check` exits 0: format check, lint, strict typecheck, 267 tests passed across 13 test files, 26 routes built.
+
 ## 2026-09-18 - Community/news pivot: free sources, X removed (ADR-0009)
 
 **Scope:** drop X, move Social Pulse to free key-less APIs, add free news/world via GDELT, and extend

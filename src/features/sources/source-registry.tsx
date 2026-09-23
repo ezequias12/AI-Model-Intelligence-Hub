@@ -1,8 +1,18 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, ChevronRight, Filter } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  AlertCircle,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Filter,
+  Key,
+  RefreshCw,
+} from "lucide-react";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Divider,
   Panel,
@@ -118,6 +128,7 @@ export function SourceRegistry({
   return (
     <div className="flex flex-col gap-4">
       <CapabilityPanel meta={meta} />
+      <ManualSyncPanel />
 
       <div className="flex flex-wrap items-center gap-2 rounded-panel border border-border bg-surface px-3 py-2">
         <Filter className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
@@ -470,6 +481,163 @@ function CapabilityPanel({ meta }: { meta: DataSourceMeta }): React.JSX.Element 
             </li>
           ))}
         </ul>
+      </PanelBody>
+    </Panel>
+  );
+}
+
+function ManualSyncPanel(): React.JSX.Element {
+  const router = useRouter();
+  const [job, setJob] = React.useState<string>("all");
+  const [adminKey, setAdminKey] = React.useState<string>("");
+  const [showKeyInput, setShowKeyInput] = React.useState<boolean>(false);
+  const [isRunning, setIsRunning] = React.useState<boolean>(false);
+  const [statusResult, setStatusResult] = React.useState<{ ok: boolean; text: string } | null>(
+    null,
+  );
+
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem("amih_admin_key");
+      if (saved) setAdminKey(saved);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const handleKeyChange = (val: string): void => {
+    setAdminKey(val);
+    try {
+      if (val) {
+        localStorage.setItem("amih_admin_key", val);
+      } else {
+        localStorage.removeItem("amih_admin_key");
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleSync = async (): Promise<void> => {
+    setIsRunning(true);
+    setStatusResult(null);
+    try {
+      const res = await fetch("/api/jobs/manual", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          job,
+          adminKey: adminKey.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setStatusResult({ ok: false, text: data.error ?? "Sync failed." });
+      } else {
+        if (job === "all" && Array.isArray(data.results)) {
+          const successes = data.results.filter((r: { ok: boolean }) => r.ok).length;
+          setStatusResult({
+            ok: data.ok,
+            text: `Sync completed: ${successes} of ${data.results.length} jobs succeeded.`,
+          });
+        } else {
+          const written = data.result?.totals?.written ?? 0;
+          const seen = data.result?.totals?.seen ?? 0;
+          setStatusResult({
+            ok: data.ok,
+            text: `Job "${job}" finished. Items seen: ${seen}, written: ${written}.`,
+          });
+        }
+        router.refresh();
+      }
+    } catch (err) {
+      setStatusResult({
+        ok: false,
+        text: err instanceof Error ? err.message : "Error connecting to sync endpoint.",
+      });
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
+  return (
+    <Panel>
+      <PanelHeader>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <PanelTitle as="h2">Manual Ingestion</PanelTitle>
+            <PanelDescription>
+              Trigger live source ingestion on demand without waiting for QStash or scheduled cron.
+            </PanelDescription>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowKeyInput(!showKeyInput)}
+            className="inline-flex items-center gap-1 text-2xs text-muted-foreground transition-[color] duration-150 ease-out hover:text-foreground"
+            title="Configure Admin / CRON_SECRET token"
+          >
+            <Key className="h-3.5 w-3.5" aria-hidden="true" />
+            <span>{adminKey ? "Token configured" : "Admin Token"}</span>
+          </button>
+        </div>
+      </PanelHeader>
+      <PanelBody className="flex flex-col gap-3">
+        {showKeyInput && (
+          <div className="flex flex-wrap items-center gap-2 rounded-control bg-surface-sunken p-2.5 text-xs">
+            <span className="text-2xs text-muted-foreground">Admin Secret (CRON_SECRET):</span>
+            <Input
+              type="password"
+              placeholder="Leave empty if CRON_SECRET is not set"
+              value={adminKey}
+              onChange={(e) => handleKeyChange(e.target.value)}
+              className="h-8 max-w-xs text-xs"
+            />
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Select
+            value={job}
+            onChange={(e) => setJob(e.target.value)}
+            disabled={isRunning}
+            aria-label="Select job to run"
+            className="h-8 w-[260px] text-xs"
+          >
+            <option value="all">All sources (Core pipeline)</option>
+            <option value="sync-models">Models (Artificial Analysis, OpenRouter, HF)</option>
+            <option value="sync-ai-news">AI News (GDELT)</option>
+            <option value="sync-social">Social Pulse (Bluesky, Hacker News)</option>
+            <option value="sync-harness-pricing">Harness Pricing</option>
+          </Select>
+
+          <Button
+            size="sm"
+            onClick={handleSync}
+            disabled={isRunning}
+            className="flex items-center gap-1.5"
+          >
+            <RefreshCw className={cn("h-3.5 w-3.5", isRunning && "animate-spin")} />
+            <span>{isRunning ? "Sincronizando..." : "Sincronizar ahora"}</span>
+          </Button>
+        </div>
+
+        {statusResult && (
+          <div
+            className={cn(
+              "flex items-center gap-2 rounded-control px-3 py-2 text-xs",
+              statusResult.ok
+                ? "bg-success-muted text-success"
+                : "bg-destructive-muted text-destructive",
+            )}
+          >
+            {statusResult.ok ? (
+              <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+            ) : (
+              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+            )}
+            <span>{statusResult.text}</span>
+          </div>
+        )}
       </PanelBody>
     </Panel>
   );

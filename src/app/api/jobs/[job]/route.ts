@@ -20,9 +20,13 @@ export async function POST(
   const { job } = await context.params;
   const body = await request.text();
   const signature = request.headers.get("upstash-signature");
+  const authorization = request.headers.get("authorization");
+  const cronSecret = request.headers.get("x-cron-secret");
 
   const verification = await verifyQStashRequest(body, signature, {
     allowUnverifiedInMock: true,
+    authorization,
+    cronSecret,
   });
 
   if (!verification.ok) {

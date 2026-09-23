@@ -91,6 +91,20 @@ export const modelMetricsSchema = z.object({
   /** Maximum context window in tokens. */
   contextWindow: metricSchema,
   /**
+   * Vendor figure: weighted average cost in USD to run one Intelligence Index
+   * task. Published by Artificial Analysis on their free API tier, so it is
+   * measured, not derived here.
+   */
+  costPerTaskUsd: usdSchema,
+  /**
+   * Vendor figure: weighted average answer tokens per Intelligence Index task.
+   * Artificial Analysis publishes this on the web only (their API exposes it on
+   * the Pro tier), so it arrives from the web-dataset adapter.
+   */
+  answerTokensPerTask: metricSchema,
+  /** Vendor figure: weighted average reasoning tokens per Intelligence Index task. */
+  reasoningTokensPerTask: metricSchema,
+  /**
    * Hugging Face 30-day download count. A popularity signal from a specific
    * platform, never a capability measure.
    */
@@ -112,6 +126,9 @@ export const MODEL_METRIC_KEYS = [
   "cacheReadPricePerMillion",
   "cacheWritePricePerMillion",
   "contextWindow",
+  "costPerTaskUsd",
+  "answerTokensPerTask",
+  "reasoningTokensPerTask",
   "hfDownloads",
   "hfLikes",
 ] as const;

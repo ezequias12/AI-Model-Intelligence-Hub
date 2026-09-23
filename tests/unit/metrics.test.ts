@@ -27,6 +27,9 @@ function metrics(input: Partial<ModelMetrics>): ModelMetrics {
     cacheReadPricePerMillion: null,
     cacheWritePricePerMillion: null,
     contextWindow: null,
+    costPerTaskUsd: null,
+    answerTokensPerTask: null,
+    reasoningTokensPerTask: null,
     hfDownloads: null,
     hfLikes: null,
     ...input,
@@ -168,13 +171,22 @@ describe("valueScore", () => {
     expect(result?.components?.agentic).toBeCloseTo(0.5, 6);
   });
 
-  it("returns null for weighted value when a component is missing", () => {
-    const incomplete = metrics({
+  it("reweights a partial capability set instead of discarding the score", () => {
+    // Artificial Analysis publishes no agentic index on its free tier, so a model
+    // with intelligence and coding only must still receive a weighted value —
+    // the weights are renormalized over what the source actually publishes.
+    const partial = metrics({
       intelligence: 80,
       inputPricePerMillion: 1,
       outputPricePerMillion: 1,
     });
-    expect(valueScore(incomplete, { mode: "weighted_value" }, population)).toBeNull();
+    const result = valueScore(partial, { mode: "weighted_value" }, population);
+
+    expect(result).not.toBeNull();
+    expect(result?.components?.agentic).toBeUndefined();
+    expect(result?.explanation).toContain("renormalized");
+    expect(result?.capability).toBeGreaterThan(0);
+    expect(result?.capability).toBeLessThanOrEqual(1);
   });
 
   it("returns null when the price is zero or missing", () => {
@@ -189,6 +201,18 @@ describe("valueScore", () => {
 describe("normalizeCapabilities", () => {
   it("returns null when the population has no values for a component", () => {
     expect(normalizeCapabilities(metrics({ intelligence: 1 }), [metrics({})])).toBeNull();
+  });
+
+  it("normalizes only the components the source publishes", () => {
+    // Live Artificial Analysis publishes no agentic index, so a population can
+    // legitimately have intelligence and coding but nothing else.
+    const population = [
+      metrics({ intelligence: 10, coding: 40 }),
+      metrics({ intelligence: 30, coding: 80 }),
+    ];
+    const result = normalizeCapabilities(metrics({ intelligence: 20, coding: 60 }), population);
+
+    expect(result).toEqual({ intelligence: 0.5, coding: 0.5 });
   });
 
   it("maps the extremes to 0 and 1", () => {

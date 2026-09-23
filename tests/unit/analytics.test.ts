@@ -53,6 +53,7 @@ describe("metric registry", () => {
         "codingPerDollar",
         "agenticPerDollar",
         "weightedValue",
+        "tokensPerTask",
       ]).toContain(metric.key);
     }
   });

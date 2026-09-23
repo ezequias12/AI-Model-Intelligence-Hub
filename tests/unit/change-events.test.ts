@@ -18,6 +18,9 @@ const METRICS: ModelSnapshot["metrics"] = {
   cacheReadPricePerMillion: 0.1,
   cacheWritePricePerMillion: null,
   contextWindow: 128000,
+  costPerTaskUsd: null,
+  answerTokensPerTask: null,
+  reasoningTokensPerTask: null,
   hfDownloads: null,
   hfLikes: null,
 };

@@ -34,6 +34,9 @@ function metrics(input: Partial<ModelMetrics>): ModelMetrics {
     cacheReadPricePerMillion: null,
     cacheWritePricePerMillion: null,
     contextWindow: null,
+    costPerTaskUsd: null,
+    answerTokensPerTask: null,
+    reasoningTokensPerTask: null,
     hfDownloads: null,
     hfLikes: null,
     ...input,
@@ -716,6 +719,37 @@ function withPopularity(slug: string, metrics: ModelMetrics): ModelMetrics {
   };
 }
 
+/**
+ * Deterministic mock task economics, so the cost-per-task and tokens-per-task
+ * charts have data in mock mode. Values are derived from the model's own prices
+ * so the relationship those charts draw (a dearer model costs more per task)
+ * stays visible instead of being noise.
+ */
+function withTaskEconomics(slug: string, metrics: ModelMetrics): ModelMetrics {
+  const seed = Number.parseInt(stableHash(`${slug}:task`).slice(0, 8), 16);
+  const inputPrice = metrics.inputPricePerMillion ?? 1;
+  const outputPrice = metrics.outputPricePerMillion ?? 4;
+  const cacheRead = metrics.cacheReadPricePerMillion ?? inputPrice;
+
+  // A representative Intelligence Index task: a large mostly-cached input
+  // prefix, a short answer, and reasoning tokens only where the model reports
+  // an agentic index (a reasoning-style model).
+  const inputTokens = 120_000;
+  const answerTokens = 900 + (seed % 1_800);
+  const reasoningTokens = metrics.agentic === null ? 0 : 4_000 + (seed % 12_000);
+
+  const cost =
+    (inputTokens * 0.7 * cacheRead + inputTokens * 0.3 * inputPrice) / 1_000_000 +
+    ((answerTokens + reasoningTokens) * outputPrice) / 1_000_000;
+
+  return {
+    ...metrics,
+    costPerTaskUsd: Math.round(cost * 10_000) / 10_000,
+    answerTokensPerTask: answerTokens,
+    reasoningTokensPerTask: reasoningTokens,
+  };
+}
+
 export function buildFixtureModels(
   providers: Provider[],
   providerSeeds: FixtureProviderSeed[],
@@ -744,7 +778,10 @@ export function buildFixtureModels(
       openWeight: seed.openWeight,
       description: `${seed.name} — fixture entry for the Model Intelligence Hub comparison workspace.`,
       officialUrl: null,
-      metrics: seed.openWeight ? withPopularity(seed.slug, seed.metrics) : seed.metrics,
+      metrics: withTaskEconomics(
+        seed.slug,
+        seed.openWeight ? withPopularity(seed.slug, seed.metrics) : seed.metrics,
+      ),
       sourceId: "artificial-analysis-api",
       sourceVersion: "fixture-2026.09",
       lastRefreshedAt: refreshedAt,

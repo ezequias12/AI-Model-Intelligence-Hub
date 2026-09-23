@@ -182,13 +182,28 @@ export function valueScore(
     const components = normalizeCapabilities(metrics, population);
     if (!components) return null;
 
-    const capability =
-      components.intelligence * weights.intelligence +
-      components.coding * weights.coding +
-      components.agentic * weights.agentic;
+    // Renormalize the weights over the components the source actually publishes.
+    // A source that publishes no agentic index reweights the score instead of
+    // switching it off, and the explanation names which components were used.
+    const parts: Array<{
+      key: "intelligence" | "coding" | "agentic";
+      value: number;
+      weight: number;
+    }> = [];
+    for (const key of ["intelligence", "coding", "agentic"] as const) {
+      const value = components[key];
+      if (value === undefined) continue;
+      parts.push({ key, value, weight: weights[key] });
+    }
 
+    const weightSum = parts.reduce((total, part) => total + part.weight, 0);
+    if (weightSum <= 0) return null;
+
+    const capability =
+      parts.reduce((total, part) => total + part.value * part.weight, 0) / weightSum;
     const score = capability / blended.value;
     const gate = gateValue(metrics, options);
+
     return {
       mode: options.mode,
       score,
@@ -198,7 +213,11 @@ export function valueScore(
       components,
       weights,
       belowThreshold: gate === null ? false : gate < (options.minimumCapability ?? 0),
-      explanation: `weighted_value = (${weights.intelligence}·intelligence + ${weights.coding}·coding + ${weights.agentic}·agentic) / blended_price`,
+      explanation: `weighted_value = (${parts
+        .map((part) => `${part.weight}·${part.key}`)
+        .join(" + ")}) / blended_price${
+        parts.length < 3 ? `, renormalized over the ${parts.length} published component(s)` : ""
+      }`,
     };
   }
 
@@ -218,30 +237,35 @@ export function valueScore(
   };
 }
 
-/** Min-max normalizes capability indices across the population into 0..1. */
+/**
+ * Min-max normalizes capability indices across the population into 0..1.
+ *
+ * Only the components the population actually publishes are normalized, and only
+ * the ones the model itself reports are returned: a source that publishes no
+ * agentic index must not switch the whole score off. The caller renormalizes the
+ * weights over whatever comes back, so a missing index reweights the result
+ * instead of blanking it. Returns null only when nothing at all can be resolved.
+ */
 export function normalizeCapabilities(
   metrics: ModelMetrics,
   population: ModelMetrics[],
-): Record<"intelligence" | "coding" | "agentic", number> | null {
+): Partial<Record<"intelligence" | "coding" | "agentic", number>> | null {
   const keys = ["intelligence", "coding", "agentic"] as const;
-  const ranges: Record<string, { min: number; max: number }> = {};
+  const out: Partial<Record<(typeof keys)[number], number>> = {};
 
   for (const key of keys) {
+    const own = metrics[key];
+    if (own === null) continue;
+
     const values = population
-      .map((m) => m[key])
-      .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
-    if (values.length === 0) return null;
-    ranges[key] = { min: Math.min(...values), max: Math.max(...values) };
+      .map((entry) => entry[key])
+      .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+    if (values.length === 0) continue;
+
+    out[key] = normalize(own, Math.min(...values), Math.max(...values));
   }
 
-  const out = {} as Record<"intelligence" | "coding" | "agentic", number>;
-  for (const key of keys) {
-    const value = metrics[key];
-    const range = ranges[key];
-    if (value === null || range === undefined) return null;
-    out[key] = normalize(value, range.min, range.max);
-  }
-  return out;
+  return Object.keys(out).length === 0 ? null : out;
 }
 
 /* -------------------------------------------------------------------------- */

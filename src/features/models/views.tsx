@@ -5,6 +5,7 @@ import { Section } from "@/components/ui/card";
 import { ModelFilterBar } from "./filter-bar";
 import { RankingBoards } from "./ranking-boards";
 import { LandscapeCharts } from "./landscape-charts";
+import { ArtificialAnalysisCharts } from "./aa-charts";
 import { ModelTable } from "./model-table";
 import { useModelsWorkspace } from "./workspace-context";
 
@@ -27,9 +28,15 @@ export function LandscapeView(): React.JSX.Element {
     <>
       <Section
         title="Landscape"
-        description="Large configurable charts. Each card has independent axis, bubble, frontier and label controls."
+        description="The Artificial Analysis set first — a bar per model and the capability-against-cost frontier — then the freely configurable charts. Every card reads the same scope, provider grouping and capability threshold."
       >
         <ModelFilterBar showScope={false} />
+      </Section>
+      <ArtificialAnalysisCharts />
+      <Section
+        title="Configurable charts"
+        description="Large configurable charts. Each card has independent axis, bubble, frontier and label controls."
+      >
         <LandscapeCharts />
       </Section>
     </>

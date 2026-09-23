@@ -55,6 +55,9 @@ export const modelRowSchema = z.object({
   cache_read_price_per_million: nullableNumber,
   cache_write_price_per_million: nullableNumber,
   context_window: nullableNumber,
+  cost_per_task_usd: nullableNumber,
+  answer_tokens_per_task: nullableNumber,
+  reasoning_tokens_per_task: nullableNumber,
   hf_downloads: nullableNumber,
   hf_likes: nullableNumber,
 });

@@ -81,6 +81,9 @@ export function mapOpenRouterModel(
     cacheReadPricePerMillion: null,
     cacheWritePricePerMillion: null,
     contextWindow: raw.context_length ?? null,
+    costPerTaskUsd: null,
+    answerTokensPerTask: null,
+    reasoningTokensPerTask: null,
     hfDownloads: null,
     hfLikes: null,
   };

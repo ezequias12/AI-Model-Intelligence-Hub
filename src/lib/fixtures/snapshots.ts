@@ -55,6 +55,11 @@ function metricsAt(model: Model, index: number, total: number): ModelMetrics {
     cacheReadPricePerMillion: project(base.cacheReadPricePerMillion, 0.1),
     cacheWritePricePerMillion: project(base.cacheWritePricePerMillion, 0.1),
     contextWindow: base.contextWindow,
+    // Task economics move with price: a price change has to show up as a cost
+    // change, or the history would contradict the current values.
+    costPerTaskUsd: project(base.costPerTaskUsd, 0.09),
+    answerTokensPerTask: project(base.answerTokensPerTask, 0.06),
+    reasoningTokensPerTask: project(base.reasoningTokensPerTask, 0.1),
     // Popularity does not have meaningful history in the mock set; it is carried
     // from the current value so snapshots stay structurally complete.
     hfDownloads: base.hfDownloads,

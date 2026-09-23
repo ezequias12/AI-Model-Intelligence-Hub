@@ -97,6 +97,58 @@ const AA_PAYLOAD = {
   ],
 };
 
+/**
+ * The documented free endpoint: same model, but it is the only path that
+ * carries the agentic index, the cost per task and the cache prices.
+ */
+const AA_FREE_PAYLOAD = {
+  tier: "free",
+  intelligence_index_version: 4.3,
+  pagination: { page: 1, page_size: 200, total_pages: 1, has_more: false },
+  data: [
+    {
+      id: "3e87c73e-a257-495e-9730-367a66229811",
+      name: "Claude Fable 5.1",
+      slug: "claude-fable-5-1",
+      release_date: "2026-09-01",
+      model_creator: { name: "Anthropic", slug: "anthropic" },
+      evaluations: {
+        artificial_analysis_intelligence_index: 53.4,
+        artificial_analysis_coding_index: 81.6,
+        artificial_analysis_agentic_index: 79.5,
+      },
+      artificial_analysis_intelligence_index_cost: {
+        total_cost: 20.69,
+        cost_per_task: { total_cost: 0.1678 },
+      },
+      pricing: {
+        price_1m_input_tokens: 10,
+        price_1m_output_tokens: 50,
+        price_1m_cache_hit_tokens: 0.015,
+        price_1m_cache_write_tokens: 0.075,
+      },
+      performance: {
+        median_output_tokens_per_second: 69.394,
+        median_time_to_first_token_seconds: 157.639,
+      },
+    },
+  ],
+};
+
+/** Routes a stubbed response by endpoint so neither path shadows the other. */
+function routeByEndpoint(payloads: { free: unknown; legacy: unknown }): FetchLike {
+  return async (url) => {
+    const payload = String(url).includes("/language/models/free") ? payloads.free : payloads.legacy;
+    return {
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      text: async () => JSON.stringify(payload),
+      json: async () => payload,
+    };
+  };
+}
+
 describe("Artificial Analysis adapter", () => {
   it("reports not_configured instead of failing when the key is absent", async () => {
     const result = await fetchArtificialAnalysis({ now: NOW });
@@ -108,7 +160,7 @@ describe("Artificial Analysis adapter", () => {
   it("maps a payload into domain models and skips unknown rows", async () => {
     const result = await fetchArtificialAnalysis({
       apiKey: "test",
-      fetchImpl: stubFetch(AA_PAYLOAD),
+      fetchImpl: routeByEndpoint({ free: AA_FREE_PAYLOAD, legacy: AA_PAYLOAD }),
       now: NOW,
     });
 
@@ -129,10 +181,57 @@ describe("Artificial Analysis adapter", () => {
     expect(mapped.model.releaseDate).toBe("2026-09-01");
   });
 
-  it("requests the documented /data/llms/models endpoint once when there is no pagination", async () => {
+  it("takes the agentic index, the cost per task and the cache prices from the documented endpoint", async () => {
+    const result = await fetchArtificialAnalysis({
+      apiKey: "test",
+      fetchImpl: routeByEndpoint({ free: AA_FREE_PAYLOAD, legacy: AA_PAYLOAD }),
+      now: NOW,
+    });
+
+    const metrics = result.items[0]!.model.metrics;
+    // Not present on the legacy catalogue endpoint, which is why these sat empty.
+    expect(metrics.agentic).toBe(79.5);
+    expect(metrics.costPerTaskUsd).toBe(0.1678);
+    expect(metrics.cacheReadPricePerMillion).toBe(0.015);
+    expect(metrics.cacheWritePricePerMillion).toBe(0.075);
+    expect(metrics.outputSpeedTps).toBe(69.394);
+  });
+
+  it("never lets a null from either endpoint displace a published value", async () => {
+    const result = await fetchArtificialAnalysis({
+      apiKey: "test",
+      fetchImpl: routeByEndpoint({
+        free: AA_FREE_PAYLOAD,
+        // The legacy row publishes no agentic index; the merged value must survive.
+        legacy: {
+          status: 200,
+          data: [
+            {
+              id: "3e87c73e-a257-495e-9730-367a66229811",
+              name: "Claude Fable 5.1",
+              slug: "claude-fable-5-1",
+              model_creator: { name: "Anthropic", slug: "anthropic" },
+              evaluations: {
+                artificial_analysis_agentic_index: null,
+                artificial_analysis_math_index: 88.2,
+              },
+            },
+          ],
+        },
+      }),
+      now: NOW,
+    });
+
+    const metrics = result.items[0]!.model.metrics;
+    expect(metrics.agentic).toBe(79.5);
+    // ...and the legacy endpoint still contributes what only it has.
+    expect(metrics.math).toBe(88.2);
+  });
+
+  it("reads both endpoints exactly once when neither reports more pages", async () => {
     const urls: string[] = [];
     const fetchImpl: FetchLike = async (url) => {
-      urls.push(url);
+      urls.push(String(url));
       return {
         ok: true,
         status: 200,
@@ -144,16 +243,18 @@ describe("Artificial Analysis adapter", () => {
 
     const result = await fetchArtificialAnalysis({ apiKey: "test", fetchImpl, now: NOW });
 
-    expect(result.requests).toBe(1);
-    expect(urls).toHaveLength(1);
-    expect(urls[0]).toContain("/data/llms/models");
-    expect(urls[0]).not.toContain("/data/llm/models");
+    expect(result.requests).toBe(2);
+    expect(urls).toHaveLength(2);
+    expect(urls.some((url) => url.includes("/language/models/free"))).toBe(true);
+    expect(urls.some((url) => url.includes("/data/llms/models"))).toBe(true);
+    // The singular path serves the site's 404 page; it must never be requested.
+    expect(urls.some((url) => url.includes("/data/llm/models"))).toBe(false);
   });
 
-  it("does not re-fetch the full list when a full page carries no pagination metadata", async () => {
+  it("does not re-fetch a full page when the response carries no pagination metadata", async () => {
     const urls: string[] = [];
     const fetchImpl: FetchLike = async (url) => {
-      urls.push(url);
+      urls.push(String(url));
       return {
         ok: true,
         status: 200,
@@ -163,8 +264,8 @@ describe("Artificial Analysis adapter", () => {
       };
     };
 
-    // pageSize 1 makes the response a "full page" of 2 rows; the old loop kept
-    // requesting page 2, 3, ... and duplicated the same models.
+    // pageSize 1 makes the response a "full page" of 2 rows; a loop that trusted
+    // the row count alone would keep requesting page 2, 3, ... forever.
     const result = await fetchArtificialAnalysis({
       apiKey: "test",
       fetchImpl,
@@ -172,8 +273,10 @@ describe("Artificial Analysis adapter", () => {
       pageSize: 1,
     });
 
-    expect(result.requests).toBe(1);
-    expect(urls).toHaveLength(1);
+    // One request per endpoint, and no page 2 for either.
+    expect(result.requests).toBe(2);
+    expect(urls).toHaveLength(2);
+    expect(urls.every((url) => url.includes("page=1"))).toBe(true);
   });
 
   it("tolerates an unknown extra field without breaking", () => {
@@ -232,16 +335,18 @@ describe("Artificial Analysis adapter", () => {
     expect(rows.snapshots[0]?.payloadHash.length).toBeGreaterThanOrEqual(16);
   });
 
-  it("surfaces an envelope that does not match the expected schema", async () => {
+  it("refuses to write an empty catalogue over the stored one", async () => {
     const result = await fetchArtificialAnalysis({
       apiKey: "test",
-      fetchImpl: stubFetch({ unexpected: true }),
+      // A valid envelope that happens to carry no rows. A successful write of it
+      // would wipe every stored model, so the adapter fails instead.
+      fetchImpl: stubFetch({ status: 200, data: [] }),
       now: NOW,
     });
 
-    // An envelope without `data`/`models` yields zero rows but is still a valid envelope.
-    expect(result.ok).toBe(true);
-    expect(result.items).toHaveLength(0);
+    expect(result.ok).toBe(false);
+    expect(result.error?.code).toBe("schema");
+    expect(result.error?.message).toContain("no models");
   });
 
   it("returns a network error when the transport fails", async () => {

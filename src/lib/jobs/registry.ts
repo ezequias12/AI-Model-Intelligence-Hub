@@ -36,7 +36,11 @@ export const JOBS: JobDefinition[] = [
     key: "sync-models",
     description:
       "Pull model metrics and pricing from the Artificial Analysis Data API, respecting quota and rate-limit headers.",
-    cron: "*/30 * * * *",
+    // Every two hours, not every thirty minutes: the adapter now reads the
+    // documented free endpoint, which paginates at 200 rows, plus the legacy
+    // catalogue endpoint. That is five requests per run, and the free tier
+    // allows 100 requests per 24 hours.
+    cron: "0 */2 * * *",
     domains: ["models"],
   },
   {

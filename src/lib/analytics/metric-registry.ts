@@ -196,6 +196,37 @@ export const METRICS: MetricDefinition[] = [
     format: fmtUsd,
   },
   {
+    key: "costPerTaskUsd",
+    label: "Cost per task",
+    shortLabel: "$/task",
+    group: "cost",
+    direction: "lower",
+    provenance: "measured",
+    unit: "USD / task",
+    description:
+      "Weighted average cost in USD to run one Intelligence Index task, as published by the metrics source. It already accounts for the input, cache, reasoning and answer token prices, so it is not derived here.",
+    get: (context) => context.model.metrics.costPerTaskUsd,
+    format: fmtUsd,
+  },
+  {
+    key: "tokensPerTask",
+    label: "Tokens per task",
+    shortLabel: "Tokens/task",
+    group: "performance",
+    direction: "lower",
+    provenance: "derived",
+    unit: "tokens",
+    description:
+      "Derived: answer tokens per task plus reasoning tokens per task, both as published by the metrics source for its Intelligence Index. Null when the source publishes neither.",
+    get: (context) => {
+      const answer = context.model.metrics.answerTokensPerTask;
+      const reasoning = context.model.metrics.reasoningTokensPerTask;
+      if (answer === null && reasoning === null) return null;
+      return (answer ?? 0) + (reasoning ?? 0);
+    },
+    format: fmtCount,
+  },
+  {
     key: "intelligencePerDollar",
     label: "Intelligence per dollar",
     shortLabel: "Intel/$",
@@ -298,6 +329,7 @@ export function formatMetric(key: string, value: number | null): string {
 /** Metrics that make sense as a scatter-chart axis. */
 export const CHART_METRIC_KEYS = [
   "blendedPrice",
+  "costPerTaskUsd",
   "intelligence",
   "coding",
   "agentic",
@@ -305,6 +337,7 @@ export const CHART_METRIC_KEYS = [
   "ttftSeconds",
   "inputPricePerMillion",
   "outputPricePerMillion",
+  "tokensPerTask",
   "contextWindow",
   "weightedValue",
 ] as const;
